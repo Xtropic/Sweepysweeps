@@ -13,7 +13,7 @@ export default function MatchesPage() {
   const [predictions, setPredictions] = useState({})
   const [loading, setLoading]         = useState(true)
   const [activeStage, setActiveStage] = useState('group')
-  const [activeGroup, setActiveGroup] = useState('A')
+  const [activeGroup, setActiveGroup] = useState('schedule') // 'schedule' or a group letter
 
   useEffect(() => { loadData() }, [])
 
@@ -21,7 +21,6 @@ export default function MatchesPage() {
   useEffect(() => {
     const channel = supabase
       .channel('live-updates')
-      // Match score / status changes
       .on(
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'matches' },
@@ -29,14 +28,12 @@ export default function MatchesPage() {
           setMatches(prev =>
             prev.map(m =>
               m.id === payload.new.id
-                // Merge new fields but keep the joined home_team / away_team objects
                 ? { ...m, ...payload.new, home_team: m.home_team, away_team: m.away_team }
                 : m
             )
           )
         }
       )
-      // Prediction points update (after admin / sync scores)
       .on(
         'postgres_changes',
         {
@@ -61,7 +58,7 @@ export default function MatchesPage() {
       supabase
         .from('matches')
         .select('*, home_team:teams!matches_home_team_id_fkey(*), away_team:teams!matches_away_team_id_fkey(*)')
-        .order('match_number', { ascending: true }),
+        .order('match_date', { ascending: true }),
       supabase.from('predictions').select('*').eq('user_id', user.id),
     ])
     setMatches(matchData || [])
@@ -74,19 +71,44 @@ export default function MatchesPage() {
   const stages = [...new Set((matches || []).map(m => m.stage))]
     .sort((a, b) => STAGE_ORDER.indexOf(a) - STAGE_ORDER.indexOf(b))
 
-  const stageMatches  = matches.filter(m => m.stage === activeStage)
-  const groups        = activeStage === 'group'
+  const stageMatches = matches.filter(m => m.stage === activeStage)
+  const groups = activeStage === 'group'
     ? [...new Set(stageMatches.map(m => m.group_name).filter(Boolean))].sort()
     : []
-  const displayMatches = activeStage === 'group'
-    ? stageMatches.filter(m => m.group_name === activeGroup)
-    : stageMatches
+
+  // Schedule view: all group matches sorted chronologically
+  const scheduleMatches = activeStage === 'group'
+    ? [...stageMatches].sort((a, b) => new Date(a.match_date) - new Date(b.match_date))
+    : []
+
+  const displayMatches = activeStage !== 'group'
+    ? stageMatches
+    : activeGroup === 'schedule'
+      ? scheduleMatches
+      : stageMatches.filter(m => m.group_name === activeGroup)
 
   const totalPredicted = Object.keys(predictions).length
   const totalPoints    = Object.values(predictions).reduce((sum, p) => sum + (p.points || 0), 0)
 
-  // Auto-select first group that has a live match, else default A
   const liveGroup = stageMatches.find(m => m.status === 'in_progress')?.group_name
+
+  // Group schedule matches by date for section headers
+  function groupByDate(matchList) {
+    const sections = []
+    let currentDate = null
+    for (const m of matchList) {
+      const dateKey = m.match_date
+        ? new Date(m.match_date).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
+        : 'Date TBC'
+      if (dateKey !== currentDate) {
+        sections.push({ date: dateKey, matches: [m] })
+        currentDate = dateKey
+      } else {
+        sections[sections.length - 1].matches.push(m)
+      }
+    }
+    return sections
+  }
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-6">
@@ -123,7 +145,7 @@ export default function MatchesPage() {
               key={stage}
               onClick={() => {
                 setActiveStage(stage)
-                setActiveGroup(liveGroup && stage === 'group' ? liveGroup : 'A')
+                setActiveGroup(liveGroup && stage === 'group' ? liveGroup : 'schedule')
               }}
               className="rounded-badge flex-shrink-0 whitespace-nowrap transition-colors"
               style={{
@@ -145,9 +167,24 @@ export default function MatchesPage() {
         })}
       </div>
 
-      {/* Group tabs */}
+      {/* Group tabs (only for group stage) */}
       {activeStage === 'group' && groups.length > 0 && (
         <div className="flex gap-1.5 overflow-x-auto pb-1 mb-4">
+
+          {/* Schedule (chronological) tab */}
+          <button
+            onClick={() => setActiveGroup('schedule')}
+            className="rounded-badge flex-shrink-0 whitespace-nowrap transition-colors"
+            style={{
+              padding: '5px 12px', fontSize: 13, fontWeight: 500,
+              background: activeGroup === 'schedule' ? '#1A6B3A' : '#E8E0CC',
+              color: activeGroup === 'schedule' ? 'white' : 'rgba(13,27,42,0.65)',
+            }}
+          >
+            Schedule
+          </button>
+
+          {/* Group A–L tabs */}
           {groups.map(g => {
             const hasLive = stageMatches.some(m => m.group_name === g && m.status === 'in_progress')
             return (
@@ -182,7 +219,39 @@ export default function MatchesPage() {
         <div className="text-center py-16" style={{ color: 'rgba(13,27,42,0.4)' }}>
           No matches available yet.
         </div>
+      ) : activeGroup === 'schedule' ? (
+        // ── Chronological view with date headers ─────────────────────────────
+        <div className="flex flex-col" style={{ gap: 24 }}>
+          {groupByDate(displayMatches).map(({ date, matches: dayMatches }) => (
+            <div key={date}>
+              <div style={{
+                fontSize: 12, fontWeight: 600, color: 'rgba(13,27,42,0.45)',
+                textTransform: 'uppercase', letterSpacing: '0.06em',
+                marginBottom: 10, paddingBottom: 6,
+                borderBottom: '1px solid rgba(13,27,42,0.08)',
+              }}>
+                {date}
+              </div>
+              <div className="flex flex-col" style={{ gap: 10 }}>
+                {dayMatches.map(match => (
+                  <div key={match.id}>
+                    {/* Group label above each card in schedule view */}
+                    <div style={{ fontSize: 11, color: 'rgba(13,27,42,0.4)', fontWeight: 500, marginBottom: 4 }}>
+                      Group {match.group_name}
+                    </div>
+                    <MatchCard
+                      match={match}
+                      prediction={predictions[match.id]}
+                      onPredictionSaved={loadData}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
       ) : (
+        // ── Group view ────────────────────────────────────────────────────────
         <div className="flex flex-col" style={{ gap: 12 }}>
           {displayMatches.map(match => (
             <MatchCard
