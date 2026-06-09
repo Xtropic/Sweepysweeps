@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { Swords, Trophy, BarChart2, Settings, GitBranch } from 'lucide-react'
+import { Swords, Trophy, BarChart2, Settings, Circle } from 'lucide-react'
 
 export default function Navbar() {
   const { user, profile, signOut } = useAuth()
@@ -10,7 +10,7 @@ export default function Navbar() {
   const [confirmingSignOut, setConfirmingSignOut] = useState(false)
 
   const links = [
-    { to: '/bracket',     label: 'WC 2026',     icon: <GitBranch size={16} /> },
+    { to: '/bracket',     label: 'WC 2026',     icon: <span style={{ fontSize: 15, lineHeight: 1 }}>⚽</span> },
     { to: '/matches',     label: 'Matches',     icon: <Swords   size={16} /> },
     { to: '/leagues',     label: 'Leagues',     icon: <Trophy   size={16} /> },
     { to: '/leaderboard', label: 'Leaderboard', icon: <BarChart2 size={16} /> },
@@ -36,7 +36,7 @@ export default function Navbar() {
         </Link>
 
         {/* Nav links + user */}
-        <div className="flex items-center gap-1 sm:gap-3">
+        <div className="flex items-center gap-1 sm:gap-3" style={{ marginLeft: 12 }}>
           {links.map(link => {
             const active = location.pathname.startsWith(link.to)
             return (
