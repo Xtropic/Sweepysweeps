@@ -8,6 +8,7 @@ import LeaderboardPage from './pages/LeaderboardPage'
 import LeaguesPage from './pages/LeaguesPage'
 import LeaguePage from './pages/LeaguePage'
 import AdminPage from './pages/AdminPage'
+import BracketPage from './pages/BracketPage'
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth()
@@ -43,6 +44,7 @@ export default function App() {
           <Route path="/leagues" element={<PrivateRoute><Layout><LeaguesPage /></Layout></PrivateRoute>} />
           <Route path="/leagues/:id" element={<PrivateRoute><Layout><LeaguePage /></Layout></PrivateRoute>} />
           <Route path="/leaderboard" element={<PrivateRoute><Layout><LeaderboardPage /></Layout></PrivateRoute>} />
+          <Route path="/bracket" element={<PrivateRoute><Layout><BracketPage /></Layout></PrivateRoute>} />
           <Route path="/admin" element={<PrivateRoute><Layout><AdminPage /></Layout></PrivateRoute>} />
           <Route path="*" element={<Navigate to="/matches" replace />} />
         </Routes>
