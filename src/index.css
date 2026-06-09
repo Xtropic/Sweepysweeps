@@ -1,0 +1,114 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: 'Lilita One';
+  src: url('/fonts/LilitaOne-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@keyframes shimmer {
+  0%, 100% { transform: translateX(-100%); }
+  50%       { transform: translateX(100%); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.4; transform: scale(0.85); }
+}
+
+@layer base {
+  body {
+    background-color: #FAF7F0;
+    color: #0D1B2A;
+    font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+    line-height: 1.7;
+    font-size: 16px;
+    font-weight: 400;
+  }
+}
+
+/* Lilita One applied to all headings — outside @layer so it wins over Tailwind preflight */
+h1, h2, h3,
+.font-lilita {
+  font-family: 'Lilita One', Georgia, serif;
+  font-weight: 400; /* Lilita is a single-weight display font */
+  letter-spacing: 0.01em;
+  line-height: 1.2;
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed;
+    padding: 9px 18px;
+    font-size: 14px;
+    font-weight: 500;
+    border-radius: 8px;
+  }
+  .btn-primary  { @apply btn; background: #1A6B3A; color: white; }
+  .btn-primary:hover:not(:disabled) { background: #155730; }
+  .btn-gold     { @apply btn; background: #D4A017; color: #4A2E00; }
+  .btn-gold:hover:not(:disabled) { background: #b88a13; }
+  .btn-secondary { @apply btn; background: transparent; color: #0D1B2A; border: 0.5px solid rgba(13,27,42,0.2); }
+  .btn-secondary:hover:not(:disabled) { background: rgba(13,27,42,0.05); }
+  .btn-danger   { @apply btn; background: #C0392B; color: white; }
+  .btn-danger:hover:not(:disabled) { background: #a93226; }
+
+  .card {
+    background: white;
+    border-radius: 12px;
+    padding: 16px;
+    border: 0.5px solid rgba(13,27,42,0.12);
+  }
+
+  .score-card {
+    background: #0D1B2A;
+    border-radius: 12px;
+    padding: 12px 16px;
+    border: 0.5px solid rgba(255,255,255,0.06);
+  }
+
+  .input {
+    @apply w-full;
+    background: white;
+    border: 0.5px solid rgba(13,27,42,0.22);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 14px;
+    color: #0D1B2A;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .input::placeholder { color: rgba(13,27,42,0.3); }
+  .input:focus {
+    border-color: #1A6B3A;
+    box-shadow: 0 0 0 2px rgba(26,107,58,0.14);
+  }
+
+  .label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: rgba(13,27,42,0.55);
+    margin-bottom: 4px;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 8px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 500;
+  }
+  .badge-qualified  { background: #D6EFE0; color: #0D3D20; }
+  .badge-eliminated { background: #F8DFDC; color: #7A1C12; }
+  .badge-group      { background: #D6E3F0; color: #0D2347; }
+  .badge-winner     { background: #F5E6B0; color: #8B6A0A; }
+  .badge-live       { background: #D6EFE0; color: #0D3D20; }
+  .badge-final      { background: #E8E0CC; color: #5A4F3A; }
+  .badge-upcoming   { background: #D6E3F0; color: #0D2347; }
+}

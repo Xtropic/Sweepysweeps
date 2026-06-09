@@ -1,0 +1,39 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm create *)",
+      "Bash(npm install *)",
+      "mcp__58d0f910-b605-4d84-8575-387415aac0e9__list_projects",
+      "mcp__58d0f910-b605-4d84-8575-387415aac0e9__list_organizations",
+      "mcp__58d0f910-b605-4d84-8575-387415aac0e9__get_cost",
+      "mcp__58d0f910-b605-4d84-8575-387415aac0e9__confirm_cost",
+      "mcp__58d0f910-b605-4d84-8575-387415aac0e9__create_project",
+      "mcp__58d0f910-b605-4d84-8575-387415aac0e9__apply_migration",
+      "mcp__58d0f910-b605-4d84-8575-387415aac0e9__get_project_url",
+      "mcp__Claude_Preview__preview_start",
+      "mcp__58d0f910-b605-4d84-8575-387415aac0e9__execute_sql",
+      "Bash(powershell -Command \"Get-Date -Format 'yyyy-MM-dd'\")",
+      "WebSearch",
+      "WebFetch(domain:en.wikipedia.org)",
+      "WebFetch(domain:www.nbcsports.com)",
+      "Bash(curl -s \"https://www.google.com/search?q=free+football+API+2026+World+Cup+live+scores\")",
+      "Bash(cat)",
+      "Read(//tmp/**)",
+      "mcp__58d0f910-b605-4d84-8575-387415aac0e9__deploy_edge_function",
+      "Bash(nimble search *)",
+      "Bash(cp \"/mnt/c/Users/DRC Mathew Rayner/Downloads/sweepy_sweep_sweep_stakes.svg\" \"/mnt/c/Users/DRC Mathew Rayner/MC Sweepstake/public/logo.svg\")",
+      "Bash(grep -i -E \"\\\\.\\(png|jpg|jpeg|svg|webp\\)$\")",
+      "Read(//mnt/c/**)",
+      "Bash(ls /mnt/)",
+      "Read(//mnt/d/**)",
+      "PowerShell(New-Item -ItemType Directory -Force \"C:\\\\Users\\\\DRC Mathew Rayner\\\\MC Sweepstake\\\\public\\\\fonts\")",
+      "PowerShell(Copy-Item \"C:\\\\Users\\\\DRC Mathew Rayner\\\\Downloads\\\\Lilita_One\\\\LilitaOne-Regular.ttf\" \"C:\\\\Users\\\\DRC Mathew Rayner\\\\MC Sweepstake\\\\public\\\\fonts\\\\LilitaOne-Regular.ttf\" -Force)",
+      "Bash(npm run *)",
+      "Bash(git init *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git config *)",
+      "Bash(git commit *)"
+    ]
+  }
+}

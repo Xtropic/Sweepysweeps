@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="700" viewBox="0 0 680 700" role="img">
+  <title>Sweepy Sweep Sweep Stakes emblem</title>
+  <defs>
+    <clipPath id="dc">
+      <polygon points="340,40 610,310 340,620 70,310"/>
+    </clipPath>
+  </defs>
+
+  <polygon points="340,40 610,310 340,620 70,310" fill="#0D1B2A"/>
+  <polygon points="340,62 588,310 340,598 92,310" fill="#D4A017"/>
+  <polygon points="340,80 568,310 340,310 112,310" fill="#1A6B3A" clip-path="url(#dc)"/>
+  <polygon points="340,390 568,310 340,590 112,310" fill="#0D1B2A" clip-path="url(#dc)"/>
+  <polygon points="340,80 568,310 340,590 112,310" fill="none" stroke="#D4A017" stroke-width="0.5" opacity="0.4"/>
+
+  <polygon points="340,88 346.5,107 366,107 350.5,118.5 357,137.5 340,126 323,137.5 329.5,118.5 314,107 333.5,107" fill="#FAF7F0"/>
+
+  <polygon points="112,310 184,220 184,400" fill="#A0720A"/>
+  <polygon points="568,310 496,220 496,400" fill="#A0720A"/>
+  <rect x="184" y="220" width="312" height="180" fill="#D4A017"/>
+  <line x1="184" y1="220" x2="496" y2="220" stroke="#A0720A" stroke-width="1.5"/>
+  <line x1="184" y1="400" x2="496" y2="400" stroke="#A0720A" stroke-width="1.5"/>
+  <line x1="200" y1="263" x2="480" y2="263" stroke="#A0720A" stroke-width="0.5" opacity="0.4"/>
+  <line x1="200" y1="308" x2="480" y2="308" stroke="#A0720A" stroke-width="0.5" opacity="0.4"/>
+  <line x1="200" y1="353" x2="480" y2="353" stroke="#A0720A" stroke-width="0.5" opacity="0.4"/>
+
+  <text x="340" y="254" text-anchor="middle"
+        font-family="'Cinzel Decorative', 'Palatino Linotype', Georgia, serif"
+        font-size="22" font-weight="700" letter-spacing="1" fill="#0D1B2A">Sweepy</text>
+  <text x="340" y="299" text-anchor="middle"
+        font-family="'Cinzel Decorative', 'Palatino Linotype', Georgia, serif"
+        font-size="22" font-weight="700" letter-spacing="1" fill="#0D1B2A">Sweep</text>
+  <text x="340" y="344" text-anchor="middle"
+        font-family="'Cinzel Decorative', 'Palatino Linotype', Georgia, serif"
+        font-size="22" font-weight="700" letter-spacing="1" fill="#0D1B2A">Sweep</text>
+  <text x="340" y="389" text-anchor="middle"
+        font-family="'Cinzel Decorative', 'Palatino Linotype', Georgia, serif"
+        font-size="22" font-weight="700" letter-spacing="1" fill="#0D1B2A">Stakes</text>
+
+  <circle cx="340" cy="490" r="58" fill="#FAF7F0"/>
+  <circle cx="340" cy="490" r="58" fill="none" stroke="#0D1B2A" stroke-width="1.5"/>
+  <polygon points="340,432 354,442 349,459 331,459 326,442" fill="#0D1B2A"/>
+  <polygon points="287,472 299,462 313,472 310,490 290,493" fill="#0D1B2A"/>
+  <polygon points="393,472 381,462 367,472 370,490 390,493" fill="#0D1B2A"/>
+  <polygon points="299,520 309,504 326,510 326,529 310,533" fill="#0D1B2A"/>
+  <polygon points="381,520 371,504 354,510 354,529 370,533" fill="#0D1B2A"/>
+  <line x1="326" y1="442" x2="299" y2="462" stroke="#FAF7F0" stroke-width="1" stroke-dasharray="2,2"/>
+  <line x1="354" y1="442" x2="381" y2="462" stroke="#FAF7F0" stroke-width="1" stroke-dasharray="2,2"/>
+  <line x1="340" y1="459" x2="340" y2="432" stroke="#FAF7F0" stroke-width="1" stroke-dasharray="2,2"/>
+  <line x1="313" y1="472" x2="309" y2="504" stroke="#FAF7F0" stroke-width="1" stroke-dasharray="2,2"/>
+  <line x1="367" y1="472" x2="371" y2="504" stroke="#FAF7F0" stroke-width="1" stroke-dasharray="2,2"/>
+  <line x1="310" y1="490" x2="309" y2="504" stroke="#FAF7F0" stroke-width="1" stroke-dasharray="2,2"/>
+  <line x1="370" y1="490" x2="371" y2="504" stroke="#FAF7F0" stroke-width="1" stroke-dasharray="2,2"/>
+  <line x1="326" y1="510" x2="326" y2="529" stroke="#FAF7F0" stroke-width="1" stroke-dasharray="2,2"/>
+  <line x1="354" y1="510" x2="354" y2="529" stroke="#FAF7F0" stroke-width="1" stroke-dasharray="2,2"/>
+
+  <text x="340" y="582" text-anchor="middle"
+        font-family="'Cinzel', 'Palatino Linotype', Georgia, serif"
+        font-size="16" font-weight="500" letter-spacing="10"
+        fill="#F5E6B0">2026</text>
+
+  <polygon points="340,40 610,310 340,620 70,310" fill="none" stroke="#D4A017" stroke-width="1"/>
+</svg>
