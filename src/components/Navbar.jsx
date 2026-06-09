@@ -10,10 +10,10 @@ export default function Navbar() {
   const [confirmingSignOut, setConfirmingSignOut] = useState(false)
 
   const links = [
+    { to: '/bracket',     label: 'WC 2026',     icon: <GitBranch size={16} /> },
     { to: '/matches',     label: 'Matches',     icon: <Swords   size={16} /> },
     { to: '/leagues',     label: 'Leagues',     icon: <Trophy   size={16} /> },
     { to: '/leaderboard', label: 'Leaderboard', icon: <BarChart2 size={16} /> },
-    { to: '/bracket',     label: 'WC 2026',     icon: <GitBranch size={16} /> },
     ...(profile?.is_admin ? [{ to: '/admin', label: 'Admin', icon: <Settings size={16} /> }] : []),
   ]
 
