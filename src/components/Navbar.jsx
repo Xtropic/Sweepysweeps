@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { Swords, Trophy, BarChart2, Settings, Globe2 } from 'lucide-react'
+import { Swords, Trophy, BarChart2, Settings, Globe2, LogOut } from 'lucide-react'
 
 export default function Navbar() {
   const { user, profile, signOut } = useAuth()
@@ -60,24 +60,40 @@ export default function Navbar() {
           })}
 
           {user && (
-            <div className="flex items-center gap-2 ml-2 pl-2" style={{ borderLeft: '0.5px solid rgba(13,27,42,0.15)' }}>
-              <span className="hidden sm:block" style={{ fontSize: 13, color: 'rgba(13,27,42,0.5)' }}>
+            <div className="flex items-center gap-1 ml-1 pl-2" style={{ borderLeft: '0.5px solid rgba(13,27,42,0.15)' }}>
+              <span className="hidden sm:block" style={{ fontSize: 13, color: 'rgba(13,27,42,0.5)', marginRight: 4 }}>
                 {profile?.username || user.email}
               </span>
               {confirmingSignOut ? (
                 <div className="flex items-center gap-1">
                   <span className="hidden sm:block" style={{ fontSize: 12, color: 'rgba(13,27,42,0.5)' }}>Sure?</span>
-                  <button onClick={handleSignOut} className="btn-danger" style={{ padding: '5px 10px', fontSize: 12 }}>
+                  <button onClick={handleSignOut} className="btn-danger" style={{ padding: '4px 8px', fontSize: 12 }}>
                     Yes
                   </button>
-                  <button onClick={() => setConfirmingSignOut(false)} className="btn-secondary" style={{ padding: '5px 10px', fontSize: 12 }}>
+                  <button onClick={() => setConfirmingSignOut(false)} className="btn-secondary" style={{ padding: '4px 8px', fontSize: 12 }}>
                     No
                   </button>
                 </div>
               ) : (
-                <button onClick={() => setConfirmingSignOut(true)} className="btn-secondary" style={{ padding: '5px 12px', fontSize: 13 }}>
-                  Sign out
-                </button>
+                <>
+                  {/* Desktop: text button */}
+                  <button onClick={() => setConfirmingSignOut(true)} className="btn-secondary hidden sm:inline-flex" style={{ padding: '5px 12px', fontSize: 13 }}>
+                    Sign out
+                  </button>
+                  {/* Mobile: icon only */}
+                  <button
+                    onClick={() => setConfirmingSignOut(true)}
+                    className="sm:hidden"
+                    style={{
+                      padding: '6px', borderRadius: 8, border: 'none',
+                      background: 'transparent', color: 'rgba(13,27,42,0.5)',
+                      cursor: 'pointer', display: 'flex', alignItems: 'center',
+                    }}
+                    aria-label="Sign out"
+                  >
+                    <LogOut size={18} />
+                  </button>
+                </>
               )}
             </div>
           )}

@@ -33,7 +33,14 @@
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
       "Bash(git config *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(git branch *)",
+      "Bash(git remote *)",
+      "Bash(git push *)",
+      "mcp__58d0f910-b605-4d84-8575-387415aac0e9__list_edge_functions",
+      "mcp__58d0f910-b605-4d84-8575-387415aac0e9__get_edge_function",
+      "WebFetch(domain:lcyxfuewlkmqodyyegqv.supabase.co)",
+      "mcp__58d0f910-b605-4d84-8575-387415aac0e9__get_logs"
     ]
   }
 }

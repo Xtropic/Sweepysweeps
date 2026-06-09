@@ -136,9 +136,9 @@ export default function LeaguePage() {
 
       {/* Page header */}
       <div className="flex items-center gap-4 mb-6">
-        <img src="/logo.png?v=2" alt="Sweepy" style={{ height: 64, width: 64, borderRadius: 14, objectFit: 'cover', flexShrink: 0 }} />
+        <img src="/logo.png?v=2" alt="Sweepy" style={{ height: 48, width: 48, borderRadius: 12, objectFit: 'cover', flexShrink: 0 }} />
         <div>
-          <h1 style={{ fontSize: 22, color: '#0D1B2A', marginBottom: 2 }}>{league.name}</h1>
+          <h1 style={{ fontSize: 18, color: '#0D1B2A', marginBottom: 2 }}>{league.name}</h1>
           <p style={{ fontSize: 13, color: 'rgba(13,27,42,0.5)' }}>{members.length} member{members.length !== 1 ? 's' : ''}</p>
         </div>
       </div>

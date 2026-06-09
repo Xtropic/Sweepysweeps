@@ -24,82 +24,92 @@ export default function MatchCard({ match, prediction, onPredictionSaved }) {
     : 'Date TBC'
 
   return (
-    <div className="card" style={{ marginBottom: 0 }}>
-      <div className="flex items-center gap-3">
+    <div className="card" style={{ marginBottom: 0, overflow: 'hidden' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
 
         {/* Dark score card */}
-        <div className="score-card flex-1 flex items-center justify-between gap-2 py-3 px-4"
-          style={isLive ? { border: '0.5px solid rgba(74,222,128,0.3)' } : {}}>
+        <div
+          className="score-card"
+          style={{
+            flex: 1, minWidth: 0, display: 'flex', alignItems: 'center',
+            justifyContent: 'space-between', gap: 4, padding: '10px 10px',
+            ...(isLive ? { border: '0.5px solid rgba(74,222,128,0.3)' } : {}),
+          }}
+        >
 
           {/* Home */}
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            <Flag teamName={match.home_team?.name} size="md" className="flex-shrink-0" />
-            <span className="truncate" style={{ fontSize: 13, fontWeight: 500, color: 'rgba(255,255,255,0.85)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
+            <Flag teamName={match.home_team?.name} size="md" style={{ flexShrink: 0 }} />
+            <span style={{
+              fontSize: 12, fontWeight: 500, color: 'rgba(255,255,255,0.85)',
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }}>
               {match.home_team?.name || 'TBD'}
             </span>
           </div>
 
           {/* Score / vs */}
-          <div className="flex-shrink-0 text-center px-3">
+          <div style={{ flexShrink: 0, textAlign: 'center', padding: '0 6px' }}>
             {isCompleted ? (
               <div>
-                <span style={{ fontSize: 26, fontWeight: 500, color: '#F5E6B0' }}>
-                  {match.home_score} – {match.away_score}
+                <span style={{ fontSize: 20, fontWeight: 500, color: '#F5E6B0' }}>
+                  {match.home_score}–{match.away_score}
                 </span>
                 {match.penalty_winner_id && (
-                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>
-                    {match.home_team_id === match.penalty_winner_id
-                      ? match.home_team?.name
-                      : match.away_team?.name} on pens
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>
+                    pens
                   </div>
                 )}
               </div>
             ) : isLive ? (
               <div>
-                <span style={{ fontSize: 26, fontWeight: 500, color: '#4ade80' }}>
-                  {match.home_score ?? 0} – {match.away_score ?? 0}
+                <span style={{ fontSize: 20, fontWeight: 500, color: '#4ade80' }}>
+                  {match.home_score ?? 0}–{match.away_score ?? 0}
                 </span>
-                <div style={{ fontSize: 10, color: '#4ade80', marginTop: 2, fontWeight: 600, letterSpacing: '0.05em' }}>
+                <div style={{ fontSize: 9, color: '#4ade80', marginTop: 2, fontWeight: 600, letterSpacing: '0.05em' }}>
                   <PulsingDot /> LIVE
                 </div>
               </div>
             ) : (
-              <span style={{ fontSize: 13, fontWeight: 500, color: 'rgba(255,255,255,0.45)' }}>vs</span>
+              <span style={{ fontSize: 12, fontWeight: 500, color: 'rgba(255,255,255,0.45)' }}>vs</span>
             )}
           </div>
 
           {/* Away */}
-          <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
-            <span className="truncate text-right" style={{ fontSize: 13, fontWeight: 500, color: 'rgba(255,255,255,0.85)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, minWidth: 0, justifyContent: 'flex-end' }}>
+            <span style={{
+              fontSize: 12, fontWeight: 500, color: 'rgba(255,255,255,0.85)',
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'right',
+            }}>
               {match.away_team?.name || 'TBD'}
             </span>
-            <Flag teamName={match.away_team?.name} size="md" className="flex-shrink-0" />
+            <Flag teamName={match.away_team?.name} size="md" style={{ flexShrink: 0 }} />
           </div>
         </div>
 
         {/* Right column: prediction + action */}
-        <div className="flex-shrink-0 flex flex-col items-end gap-1" style={{ minWidth: 72 }}>
+        <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, width: 68 }}>
           {hasPrediction && (
-            <div className="text-center">
-              <div style={{ fontSize: 11, color: 'rgba(13,27,42,0.45)', fontWeight: 500 }}>Your pick</div>
-              <div style={{ fontSize: 14, fontWeight: 500, color: '#1A6B3A' }}>
+            <div style={{ textAlign: 'center', width: '100%' }}>
+              <div style={{ fontSize: 10, color: 'rgba(13,27,42,0.45)', fontWeight: 500 }}>Your pick</div>
+              <div style={{ fontSize: 13, fontWeight: 500, color: '#1A6B3A' }}>
                 {prediction.predicted_home_score}–{prediction.predicted_away_score}
               </div>
               {prediction.points != null ? (
                 <button
                   onClick={() => setShowBreakdown(b => !b)}
                   style={{
-                    fontSize: 11, fontWeight: 500, cursor: 'pointer', border: 'none',
+                    fontSize: 10, fontWeight: 500, cursor: 'pointer', border: 'none',
                     color:      prediction.points > 0 ? '#0D3D20' : 'rgba(13,27,42,0.4)',
                     background: prediction.points > 0 ? '#D6EFE0' : '#E8E0CC',
-                    borderRadius: 6, padding: '1px 7px', display: 'inline-block',
+                    borderRadius: 6, padding: '1px 6px', display: 'inline-block',
                   }}
                   title="Show points breakdown"
                 >
                   {prediction.points}pts {showBreakdown ? '▲' : '▼'}
                 </button>
               ) : isLive ? (
-                <span style={{ fontSize: 11, color: '#4ade80', fontWeight: 500 }}>pending…</span>
+                <span style={{ fontSize: 10, color: '#4ade80', fontWeight: 500 }}>pending…</span>
               ) : null}
             </div>
           )}
@@ -108,14 +118,14 @@ export default function MatchCard({ match, prediction, onPredictionSaved }) {
             <button
               onClick={() => setExpanded(e => !e)}
               className={hasPrediction ? 'btn-secondary' : 'btn-primary'}
-              style={{ padding: '5px 12px', fontSize: 13 }}
+              style={{ padding: '5px 8px', fontSize: 12, width: '100%', textAlign: 'center' }}
             >
               {hasPrediction ? 'Edit' : 'Predict'}
             </button>
           )}
 
           {isLive && !hasPrediction && (
-            <span style={{ fontSize: 11, color: 'rgba(13,27,42,0.35)', fontStyle: 'italic' }}>locked</span>
+            <span style={{ fontSize: 10, color: 'rgba(13,27,42,0.35)', fontStyle: 'italic' }}>locked</span>
           )}
         </div>
       </div>
