@@ -16,7 +16,7 @@ const GROUPS = ['A','B','C','D','E','F','G','H','I','J','K','L']
 export default function BracketPage() {
   const [matches, setMatches]   = useState([])
   const [loading, setLoading]   = useState(true)
-  const [tab, setTab]           = useState('groups')
+  const [tab, setTab]           = useState('bracket')
 
   useEffect(() => {
     supabase
@@ -53,7 +53,7 @@ export default function BracketPage() {
 
       {/* Tabs */}
       <div className="flex gap-1.5 mb-6">
-        {[{ key: 'groups', label: '👥 Groups' }, { key: 'bracket', label: '🏆 Knock-out' }].map(t => (
+        {[{ key: 'bracket', label: '🏆 WC 2026' }, { key: 'groups', label: '👥 Groups' }].map(t => (
           <button key={t.key} onClick={() => setTab(t.key)}
             className="rounded-badge transition-colors"
             style={{
