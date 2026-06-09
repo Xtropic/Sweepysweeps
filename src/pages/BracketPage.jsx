@@ -53,7 +53,7 @@ export default function BracketPage() {
 
       {/* Tabs */}
       <div className="flex gap-1.5 mb-6">
-        {[{ key: 'groups', label: '👥 Groups' }, { key: 'bracket', label: '🏆 Knock-out' }].map(t => (
+        {[{ key: 'groups', label: 'Groups' }, { key: 'bracket', label: 'Knock-out' }].map(t => (
           <button key={t.key} onClick={() => setTab(t.key)}
             className="rounded-badge transition-colors"
             style={{
@@ -130,7 +130,7 @@ function BracketView({ matches, thirdPlace }) {
             fontSize: 11, fontWeight: 600, color: 'rgba(13,27,42,0.45)',
             textTransform: 'uppercase', letterSpacing: '0.06em',
           }}>
-            🥉 Third Place Play-off
+            Third Place Play-off
           </div>
           <div style={{ maxWidth: 200, margin: '0 auto' }}>
             <MatchSlot match={thirdPlace} />

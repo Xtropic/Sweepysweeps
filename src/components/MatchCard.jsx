@@ -178,12 +178,12 @@ function CountdownTimer({ matchDate }) {
   const h  = Math.floor(diff / 3600000)
   const m  = Math.floor((diff % 3600000) / 60000)
   const s  = Math.floor((diff % 60000) / 1000)
-  const display = h > 0 ? `${h}h ${m}m` : m > 0 ? `${m}m ${s}s` : `${s}s`
+  const display = h > 0 ? `in ${h}h ${m}m` : m > 0 ? `in ${m}m ${s}s` : `in ${s}s`
   const urgent  = diff < 30 * 60 * 1000 // < 30 min → red
 
   return (
     <span style={{ fontWeight: 500, color: urgent ? '#C0392B' : '#D4A017' }}>
-      ⏱ {display}
+      {display}
     </span>
   )
 }

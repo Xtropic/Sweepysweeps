@@ -87,7 +87,7 @@ export default function Navbar() {
                     style={{
                       padding: '6px', borderRadius: 8, border: 'none',
                       background: 'transparent', color: 'rgba(13,27,42,0.5)',
-                      cursor: 'pointer', display: 'flex', alignItems: 'center',
+                      cursor: 'pointer', alignItems: 'center',
                     }}
                     aria-label="Sign out"
                   >
