@@ -124,10 +124,11 @@ const PRIZE_CHECKBOXES = [
 ]
 
 function CreateLeagueForm({ userId, onCreated, onCancel }) {
-  const [name, setName] = useState('')
+  const [name, setName]                       = useState('')
   const [prizeTournament, setPrizeTournament] = useState(false)
   const [prizePerRound, setPrizePerRound]     = useState(false)
-  const [error, setError] = useState('')
+  const [predStyle, setPredStyle]             = useState('exact_score')
+  const [error, setError]   = useState('')
   const [saving, setSaving] = useState(false)
 
   async function handleSubmit(e) {
@@ -136,7 +137,7 @@ function CreateLeagueForm({ userId, onCreated, onCancel }) {
     setSaving(true); setError('')
     const prizeType = toPrizeType(prizeTournament, prizePerRound)
     const { data: league, error: err } = await supabase
-      .from('leagues').insert({ name: name.trim(), admin_user_id: userId, prize_type: prizeType }).select().single()
+      .from('leagues').insert({ name: name.trim(), admin_user_id: userId, prize_type: prizeType, prediction_style: predStyle }).select().single()
     if (err) { setError(err.message); setSaving(false); return }
     await supabase.from('league_members').insert({ league_id: league.id, user_id: userId })
     setSaving(false); onCreated()
@@ -196,6 +197,41 @@ function CreateLeagueForm({ userId, onCreated, onCancel }) {
               This app does not handle or hold any money — entry fees are managed between members directly.
             </div>
           )}
+        </div>
+
+        {/* Prediction style */}
+        <div>
+          <label className="label" style={{ marginBottom: 4 }}>Prediction style</label>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {[
+              { value: 'exact_score', title: 'Exact score', desc: 'Predict the final score (e.g. 2–1). 3 pts exact, 1 pt correct result.' },
+              { value: 'result_only', title: 'Result only (Win / Draw / Lose)', desc: 'Just pick the outcome. 1 pt for the correct result.' },
+            ].map(opt => {
+              const sel = predStyle === opt.value
+              return (
+                <div key={opt.value} onClick={() => setPredStyle(opt.value)}
+                  style={{
+                    display: 'flex', alignItems: 'flex-start', gap: 12, cursor: 'pointer',
+                    padding: '12px 14px', borderRadius: 10,
+                    border: `1.5px solid ${sel ? 'rgba(26,107,58,0.5)' : 'rgba(13,27,42,0.12)'}`,
+                    background: sel ? 'rgba(26,107,58,0.05)' : 'white', transition: 'all 0.15s',
+                  }}>
+                  <div style={{
+                    flexShrink: 0, marginTop: 2, width: 18, height: 18, borderRadius: '50%',
+                    border: `2px solid ${sel ? '#1A6B3A' : 'rgba(13,27,42,0.25)'}`,
+                    background: sel ? '#1A6B3A' : 'white',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s',
+                  }}>
+                    {sel && <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'white' }} />}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 500, color: '#0D1B2A', marginBottom: 3 }}>{opt.title}</div>
+                    <div style={{ fontSize: 13, color: 'rgba(13,27,42,0.55)', lineHeight: 1.5 }}>{opt.desc}</div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
         </div>
 
         {error && <p style={{ fontSize: 13, color: '#C0392B' }}>{error}</p>}

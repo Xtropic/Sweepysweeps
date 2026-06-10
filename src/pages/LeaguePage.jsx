@@ -65,13 +65,17 @@ export default function LeaguePage() {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [togglingPaid, setTogglingPaid]   = useState(null)
 
+  // Per-league result-only points (null = use global total_points)
+  const [leagueMemberPoints, setLeagueMemberPoints] = useState(null)
+
   // Settings editor state
-  const [editingSettings, setEditingSettings]     = useState(false)
-  const [settingsName, setSettingsName]           = useState('')
-  const [settingsTournament, setSettingsTournament] = useState(false)
-  const [settingsPerRound, setSettingsPerRound]   = useState(false)
-  const [savingSettings, setSavingSettings]       = useState(false)
-  const [settingsError, setSettingsError]         = useState('')
+  const [editingSettings, setEditingSettings]         = useState(false)
+  const [settingsName, setSettingsName]               = useState('')
+  const [settingsTournament, setSettingsTournament]   = useState(false)
+  const [settingsPerRound, setSettingsPerRound]       = useState(false)
+  const [settingsPredStyle, setSettingsPredStyle]     = useState('exact_score')
+  const [savingSettings, setSavingSettings]           = useState(false)
+  const [settingsError, setSettingsError]             = useState('')
 
   // Rounds tab state
   const [roundsData, setRoundsData]       = useState([])
@@ -92,7 +96,7 @@ export default function LeaguePage() {
 
   async function loadLeague() {
     const [{ data: lg }, { data: memberData }] = await Promise.all([
-      supabase.from('leagues').select('*, prize_type').eq('id', id).single(),
+      supabase.from('leagues').select('*, prize_type, prediction_style').eq('id', id).single(),
       supabase.from('league_members')
         .select('user_id, joined_at, paid, profiles(id, username, total_points)')
         .eq('league_id', id).order('joined_at', { ascending: true }),
@@ -102,7 +106,41 @@ export default function LeaguePage() {
       .map(m => ({ ...m.profiles, joined_at: m.joined_at, paid: m.paid }))
       .sort((a, b) => (b.total_points || 0) - (a.total_points || 0))
     setMembers(sorted)
+    if (lg?.prediction_style === 'result_only') {
+      await computeResultOnlyPoints(sorted)
+    } else {
+      setLeagueMemberPoints(null)
+    }
     setLoading(false)
+  }
+
+  async function computeResultOnlyPoints(memberList) {
+    const memberIds = memberList.map(m => m.id)
+    const [{ data: matchData }, { data: predData }] = await Promise.all([
+      supabase.from('matches').select('id, home_score, away_score').eq('status', 'completed'),
+      supabase.from('predictions')
+        .select('user_id, match_id, predicted_home_score, predicted_away_score')
+        .in('user_id', memberIds),
+    ])
+    const predByUser = {}
+    for (const p of predData || []) {
+      if (!predByUser[p.user_id]) predByUser[p.user_id] = {}
+      predByUser[p.user_id][p.match_id] = p
+    }
+    const ptsMap = {}
+    for (const m of memberList) ptsMap[m.id] = 0
+    for (const match of matchData || []) {
+      if (match.home_score == null || match.away_score == null) continue
+      const actualSign = Math.sign(match.home_score - match.away_score)
+      for (const m of memberList) {
+        const p = predByUser[m.id]?.[match.id]
+        if (!p || p.predicted_home_score == null) continue
+        if (Math.sign(p.predicted_home_score - p.predicted_away_score) === actualSign) {
+          ptsMap[m.id]++
+        }
+      }
+    }
+    setLeagueMemberPoints(ptsMap)
   }
 
   async function loadPredictions(memberList) {
@@ -243,6 +281,7 @@ export default function LeaguePage() {
     setSettingsName(league.name)
     setSettingsTournament(hasTournamentPrize(pt))
     setSettingsPerRound(hasRoundPrize(pt))
+    setSettingsPredStyle(league.prediction_style || 'exact_score')
     setSettingsError('')
     setEditingSettings(true)
   }
@@ -251,7 +290,11 @@ export default function LeaguePage() {
     if (settingsName.trim().length < 2) { setSettingsError('Name must be at least 2 characters'); return }
     setSavingSettings(true); setSettingsError('')
     const { error } = await supabase.from('leagues')
-      .update({ name: settingsName.trim(), prize_type: toPrizeType(settingsTournament, settingsPerRound) })
+      .update({
+        name: settingsName.trim(),
+        prize_type: toPrizeType(settingsTournament, settingsPerRound),
+        prediction_style: settingsPredStyle,
+      })
       .eq('id', id)
     if (error) { setSettingsError(error.message); setSavingSettings(false); return }
     await loadLeague()
@@ -273,7 +316,18 @@ export default function LeaguePage() {
   if (!league) return <div className="text-center py-16" style={{ color: 'rgba(13,27,42,0.4)' }}>League not found.</div>
 
   const isAdmin = league.admin_user_id === user.id
-  const totalPoints = members.reduce((sum, m) => sum + (m.total_points || 0), 0)
+  const isResultOnly = league.prediction_style === 'result_only'
+
+  // For result_only leagues use per-league computed points; otherwise use global
+  const getMemberPts = (member) =>
+    leagueMemberPoints ? (leagueMemberPoints[member.id] ?? 0) : (member.total_points ?? 0)
+
+  // Re-sort members by the appropriate points
+  const rankedMembers = isResultOnly && leagueMemberPoints
+    ? [...members].sort((a, b) => getMemberPts(b) - getMemberPts(a))
+    : members
+
+  const totalPoints = rankedMembers.reduce((sum, m) => sum + getMemberPts(m), 0)
   const hasPrize = league.prize_type && league.prize_type !== 'none'
 
   const rankStyle = (i) => {
@@ -405,6 +459,41 @@ export default function LeaguePage() {
                 )}
               </div>
 
+              {/* Prediction style */}
+              <div style={{ marginBottom: 16 }}>
+                <label className="label" style={{ marginBottom: 8 }}>Prediction style</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {[
+                    { value: 'exact_score', title: 'Exact score', desc: 'Members predict the final score (e.g. 2–1). 3 pts for exact score, 1 pt for correct result.' },
+                    { value: 'result_only', title: 'Result only (Win / Draw / Lose)', desc: 'Members predict just the outcome. 1 pt for correct result.' },
+                  ].map(opt => {
+                    const sel = settingsPredStyle === opt.value
+                    return (
+                      <div key={opt.value} onClick={() => setSettingsPredStyle(opt.value)}
+                        style={{
+                          display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer',
+                          padding: '10px 12px', borderRadius: 8,
+                          border: `1.5px solid ${sel ? 'rgba(13,107,58,0.5)' : 'rgba(13,27,42,0.1)'}`,
+                          background: sel ? 'rgba(26,107,58,0.05)' : 'white', transition: 'all 0.15s',
+                        }}>
+                        <div style={{
+                          flexShrink: 0, marginTop: 2, width: 16, height: 16, borderRadius: '50%',
+                          border: `2px solid ${sel ? '#1A6B3A' : 'rgba(13,27,42,0.25)'}`,
+                          background: sel ? '#1A6B3A' : 'white',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}>
+                          {sel && <div style={{ width: 5, height: 5, borderRadius: '50%', background: 'white' }} />}
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 13, fontWeight: 500, color: '#0D1B2A' }}>{opt.title}</div>
+                          <div style={{ fontSize: 12, color: 'rgba(13,27,42,0.5)', marginTop: 1 }}>{opt.desc}</div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
               {settingsError && <p style={{ fontSize: 13, color: '#C0392B', marginBottom: 12 }}>{settingsError}</p>}
 
               <div className="flex gap-2">
@@ -423,6 +512,27 @@ export default function LeaguePage() {
           )}
         </div>
       )}
+
+      {/* Scoring rules — always visible to all members */}
+      <div className="card mb-5" style={{ padding: '12px 16px', background: '#F5F3EE', border: '1px solid rgba(13,27,42,0.08)' }}>
+        <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(13,27,42,0.45)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
+          How points work in this league
+        </div>
+        {isResultOnly ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <ScoreRule pts={1} label="Correct result (Home win / Draw / Away win)" />
+            <div style={{ fontSize: 12, color: 'rgba(13,27,42,0.45)', marginTop: 4 }}>
+              Standings show result-only points, separate from your global score.
+            </div>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <ScoreRule pts={3} label="Exact score correct" />
+            <ScoreRule pts={1} label="Correct result only (Home win / Draw / Away win)" />
+            <ScoreRule pts={0} label="Wrong result" />
+          </div>
+        )}
+      </div>
 
       {/* Tabs */}
       <div className="flex gap-2 mb-5 overflow-x-auto pb-1">
@@ -472,9 +582,10 @@ export default function LeaguePage() {
             </div>
           )}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 24 }}>
-            {members.map((member, i) => {
+            {rankedMembers.map((member, i) => {
               const isMe = member.id === user.id
               const rs = rankStyle(i)
+              const pts = getMemberPts(member)
               return (
                 <div key={member.id} className="card flex items-center gap-3"
                   style={isMe ? { border: '1.5px solid #1A6B3A' } : {}}>
@@ -493,7 +604,7 @@ export default function LeaguePage() {
                     </span>
                   </div>
                   <div style={{ fontSize: 18, fontWeight: 500, color: '#0D1B2A' }}>
-                    {member.total_points ?? 0}
+                    {pts}
                     <span style={{ fontSize: 11, color: 'rgba(13,27,42,0.45)', fontWeight: 400, marginLeft: 3 }}>pts</span>
                   </div>
                   {/* Paid status — tournament prize only (per_round tracked in Round winners tab) */}
@@ -768,6 +879,7 @@ export default function LeaguePage() {
                       currentUserId={user.id}
                       expanded={expandedMatch === match.id}
                       onToggle={() => setExpandedMatch(expandedMatch === match.id ? null : match.id)}
+                      resultOnly={isResultOnly}
                     />
                   ))}
                 </div>
@@ -780,7 +892,14 @@ export default function LeaguePage() {
   )
 }
 
-function PredictionMatchCard({ match, members, predsForMatch, currentUserId, expanded, onToggle }) {
+function resultLabel(home, away) {
+  if (home == null || away == null) return null
+  if (home > away)  return { text: 'Home win', bg: '#D6EFE0', color: '#0D3D20' }
+  if (home === away) return { text: 'Draw',     bg: '#E8E0CC', color: '#5A4F3A' }
+  return             { text: 'Away win', bg: '#F8DFDC', color: '#7A1C12' }
+}
+
+function PredictionMatchCard({ match, members, predsForMatch, currentUserId, expanded, onToggle, resultOnly }) {
   const isCompleted = match.status === 'completed'
   const isKnockout  = KNOCKOUT_STAGES.includes(match.stage)
   const matchDate   = match.match_date
@@ -865,25 +984,47 @@ function PredictionMatchCard({ match, members, predsForMatch, currentUserId, exp
                 </span>
                 {pred ? (
                   <div className="flex items-center gap-2">
-                    <span style={{ fontSize: 14, fontWeight: 500, color: '#0D1B2A', letterSpacing: '0.02em' }}>
-                      {pred.predicted_home_score} – {pred.predicted_away_score}
-                    </span>
-                    {isKnockout && pred.penalty_winner_id && (
-                      <span style={{ fontSize: 11, color: 'rgba(13,27,42,0.45)' }}>
-                        ({pred.penalty_winner_id === match.home_team_id
-                          ? match.home_team?.name
-                          : match.away_team?.name} pens)
-                      </span>
-                    )}
-                    {pred.points != null && (
-                      <span style={{
-                        fontSize: 11, fontWeight: 500,
-                        color: pred.points > 0 ? '#0D3D20' : 'rgba(13,27,42,0.4)',
-                        background: pred.points > 0 ? '#D6EFE0' : '#E8E0CC',
-                        borderRadius: 6, padding: '1px 7px',
-                      }}>
-                        {pred.points}pts
-                      </span>
+                    {resultOnly ? (
+                      (() => {
+                        const rl = resultLabel(pred.predicted_home_score, pred.predicted_away_score)
+                        const actualRl = isCompleted ? resultLabel(match.home_score, match.away_score) : null
+                        const correct = actualRl && rl && rl.text === actualRl.text
+                        return (
+                          <>
+                            <span style={{ fontSize: 12, fontWeight: 600, borderRadius: 6, padding: '2px 8px', background: rl?.bg || '#E8E0CC', color: rl?.color || '#0D1B2A' }}>
+                              {rl?.text || '—'}
+                            </span>
+                            {isCompleted && (
+                              <span style={{ fontSize: 11, fontWeight: 500, borderRadius: 6, padding: '1px 7px', background: correct ? '#D6EFE0' : '#F8DFDC', color: correct ? '#0D3D20' : '#7A1C12' }}>
+                                {correct ? '1 pt' : '0 pts'}
+                              </span>
+                            )}
+                          </>
+                        )
+                      })()
+                    ) : (
+                      <>
+                        <span style={{ fontSize: 14, fontWeight: 500, color: '#0D1B2A', letterSpacing: '0.02em' }}>
+                          {pred.predicted_home_score} – {pred.predicted_away_score}
+                        </span>
+                        {isKnockout && pred.penalty_winner_id && (
+                          <span style={{ fontSize: 11, color: 'rgba(13,27,42,0.45)' }}>
+                            ({pred.penalty_winner_id === match.home_team_id
+                              ? match.home_team?.name
+                              : match.away_team?.name} pens)
+                          </span>
+                        )}
+                        {pred.points != null && (
+                          <span style={{
+                            fontSize: 11, fontWeight: 500,
+                            color: pred.points > 0 ? '#0D3D20' : 'rgba(13,27,42,0.4)',
+                            background: pred.points > 0 ? '#D6EFE0' : '#E8E0CC',
+                            borderRadius: 6, padding: '1px 7px',
+                          }}>
+                            {pred.points}pts
+                          </span>
+                        )}
+                      </>
                     )}
                   </div>
                 ) : (
@@ -896,6 +1037,22 @@ function PredictionMatchCard({ match, members, predsForMatch, currentUserId, exp
           })}
         </div>
       )}
+    </div>
+  )
+}
+
+function ScoreRule({ pts, label }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <span style={{
+        fontSize: 12, fontWeight: 700, minWidth: 32, textAlign: 'center',
+        background: pts > 0 ? '#D6EFE0' : '#E8E0CC',
+        color: pts > 0 ? '#0D3D20' : 'rgba(13,27,42,0.45)',
+        borderRadius: 5, padding: '1px 6px',
+      }}>
+        {pts > 0 ? `+${pts}` : '0'}
+      </span>
+      <span style={{ fontSize: 13, color: 'rgba(13,27,42,0.65)' }}>{label}</span>
     </div>
   )
 }
