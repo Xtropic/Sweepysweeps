@@ -35,7 +35,7 @@ export default function LeaguePage() {
 
   async function loadLeague() {
     const [{ data: lg }, { data: memberData }] = await Promise.all([
-      supabase.from('leagues').select('*').eq('id', id).single(),
+      supabase.from('leagues').select('*, has_prize_money').eq('id', id).single(),
       supabase.from('league_members')
         .select('user_id, joined_at, paid, profiles(id, username, total_points)')
         .eq('league_id', id).order('joined_at', { ascending: true }),
@@ -226,8 +226,8 @@ export default function LeaguePage() {
                     {member.total_points ?? 0}
                     <span style={{ fontSize: 11, color: 'rgba(13,27,42,0.45)', fontWeight: 400, marginLeft: 3 }}>pts</span>
                   </div>
-                  {/* Paid status — clickable for admin, badge-only for others */}
-                  {isAdmin ? (
+                  {/* Paid status — only shown for prize money leagues */}
+                  {league.has_prize_money && isAdmin ? (
                     <button
                       onClick={() => togglePaid(member.id, member.paid)}
                       disabled={togglingPaid === member.id}
@@ -242,7 +242,7 @@ export default function LeaguePage() {
                     >
                       {member.paid ? 'Paid' : 'Unpaid'}
                     </button>
-                  ) : (
+                  ) : league.has_prize_money ? (
                     <span style={{
                       fontSize: 11, fontWeight: 600, flexShrink: 0,
                       borderRadius: 6, padding: '3px 8px',
@@ -251,7 +251,7 @@ export default function LeaguePage() {
                     }}>
                       {member.paid ? 'Paid' : 'Unpaid'}
                     </span>
-                  )}
+                  ) : null}
                   {isAdmin && !isMe && (
                     <button onClick={() => removeMember(member.id)}
                       style={{ fontSize: 12, color: 'rgba(13,27,42,0.3)', marginLeft: 4, cursor: 'pointer' }}

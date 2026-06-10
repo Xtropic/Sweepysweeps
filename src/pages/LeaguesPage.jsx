@@ -102,6 +102,7 @@ export default function LeaguesPage() {
 
 function CreateLeagueForm({ userId, onCreated, onCancel }) {
   const [name, setName] = useState('')
+  const [hasPrizeMoney, setHasPrizeMoney] = useState(false)
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
 
@@ -110,7 +111,7 @@ function CreateLeagueForm({ userId, onCreated, onCancel }) {
     if (name.trim().length < 2) { setError('Name must be at least 2 characters'); return }
     setSaving(true); setError('')
     const { data: league, error: err } = await supabase
-      .from('leagues').insert({ name: name.trim(), admin_user_id: userId }).select().single()
+      .from('leagues').insert({ name: name.trim(), admin_user_id: userId, has_prize_money: hasPrizeMoney }).select().single()
     if (err) { setError(err.message); setSaving(false); return }
     await supabase.from('league_members').insert({ league_id: league.id, user_id: userId })
     setSaving(false); onCreated()
@@ -118,7 +119,7 @@ function CreateLeagueForm({ userId, onCreated, onCancel }) {
 
   return (
     <div className="card mb-6">
-      <h2 style={{ fontSize: 18, marginBottom: 16 }}>Create a new league</h2>
+      <h2 style={{ fontSize: 16, fontWeight: 500, marginBottom: 16 }}>Create a new league</h2>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="label">League name</label>
@@ -126,6 +127,51 @@ function CreateLeagueForm({ userId, onCreated, onCancel }) {
             value={name} onChange={e => setName(e.target.value)}
             placeholder="e.g. Office sweepstake, Sunday league lads…" maxLength={60} />
         </div>
+
+        {/* Prize money toggle */}
+        <div
+          onClick={() => setHasPrizeMoney(v => !v)}
+          style={{
+            display: 'flex', alignItems: 'flex-start', gap: 12, cursor: 'pointer',
+            padding: '14px 16px', borderRadius: 10,
+            border: `1.5px solid ${hasPrizeMoney ? 'rgba(212,160,23,0.5)' : 'rgba(13,27,42,0.12)'}`,
+            background: hasPrizeMoney ? '#FFFDF4' : 'white',
+            transition: 'all 0.15s',
+          }}
+        >
+          {/* Toggle pill */}
+          <div style={{
+            flexShrink: 0, marginTop: 2,
+            width: 36, height: 20, borderRadius: 10,
+            background: hasPrizeMoney ? '#D4A017' : 'rgba(13,27,42,0.15)',
+            position: 'relative', transition: 'background 0.2s',
+          }}>
+            <div style={{
+              position: 'absolute', top: 3, left: hasPrizeMoney ? 19 : 3,
+              width: 14, height: 14, borderRadius: '50%', background: 'white',
+              transition: 'left 0.2s',
+            }} />
+          </div>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 500, color: '#0D1B2A', marginBottom: 4 }}>
+              Prize money league
+            </div>
+            <div style={{ fontSize: 13, color: 'rgba(13,27,42,0.55)', lineHeight: 1.5 }}>
+              Members are each paying an entry fee (collected outside this app). Enabling this adds a
+              <strong style={{ color: '#0D1B2A' }}> Paid / Unpaid</strong> tag to every member so you can track
+              who has contributed. Only the league admin can mark members as paid.
+            </div>
+            {hasPrizeMoney && (
+              <div style={{
+                marginTop: 8, fontSize: 12, color: '#8B6A0A',
+                background: '#F5E6B0', borderRadius: 6, padding: '5px 10px', display: 'inline-block',
+              }}>
+                This app does not handle or hold any money — entry fees are managed between members directly.
+              </div>
+            )}
+          </div>
+        </div>
+
         {error && <p style={{ fontSize: 13, color: '#C0392B' }}>{error}</p>}
         <div className="flex gap-2">
           <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Creating…' : 'Create league'}</button>

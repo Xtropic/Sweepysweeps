@@ -14,7 +14,7 @@ export default function AdminPage() {
   async function loadLeagues() {
     const { data } = await supabase
       .from('leagues')
-      .select('*, league_members(user_id, paid, profiles(id, username, total_points))')
+      .select('*, has_prize_money, league_members(user_id, paid, profiles(id, username, total_points))')
       .eq('admin_user_id', user.id)
       .order('created_at', { ascending: false })
     setLeagues(data || [])
@@ -172,8 +172,8 @@ function LeagueAdminCard({ league, currentUserId, onDeleted }) {
                   <span style={{ fontSize: 11, color: 'rgba(13,27,42,0.45)', fontWeight: 400, marginLeft: 3 }}>pts</span>
                 </span>
 
-                {/* Paid toggle */}
-                <button
+                {/* Paid toggle — only for prize money leagues */}
+                {league.has_prize_money && <button
                   onClick={() => togglePaid(member.id, member.paid)}
                   disabled={togglingId === member.id}
                   style={{
@@ -186,7 +186,7 @@ function LeagueAdminCard({ league, currentUserId, onDeleted }) {
                   title="Toggle paid status"
                 >
                   {member.paid ? 'Paid' : 'Unpaid'}
-                </button>
+                </button>}
 
                 {/* Remove button (not for self) */}
                 {!isMe && (
