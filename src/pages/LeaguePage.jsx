@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { STAGE_LABELS, KNOCKOUT_STAGES } from '../lib/teams'
 import Flag from '../components/Flag'
 import LeagueChat from '../components/LeagueChat'
+import LeagueMatchesTab from '../components/LeagueMatchesTab'
 import AdBanner from '../components/AdBanner'
 
 const STAGE_ORDER = ['group', 'round_of_32', 'round_of_16', 'quarter_final', 'semi_final', 'third_place', 'final']
@@ -603,10 +604,11 @@ export default function LeaguePage() {
       {/* Tabs */}
       <div className="flex gap-2 mb-5 overflow-x-auto pb-1">
         {[
-          { key: 'standings',   label: 'Standings' },
+          { key: 'standings',   label: 'Standings'     },
+          { key: 'matches',     label: 'Matches'       },
           { key: 'rounds',      label: 'Round winners' },
-          { key: 'predictions', label: 'Predictions' },
-          { key: 'chat',        label: '💬 Chat' },
+          { key: 'predictions', label: 'Predictions'   },
+          { key: 'chat',        label: '💬 Chat'       },
         ].map(({ key, label }) => (
           <button key={key} onClick={() => handleTabChange(key)}
             style={{
@@ -744,6 +746,11 @@ export default function LeaguePage() {
             )}
           </div>
         </>
+      )}
+
+      {/* ── MATCHES TAB ── */}
+      {activeTab === 'matches' && (
+        <LeagueMatchesTab userId={user.id} isResultOnly={isResultOnly} />
       )}
 
       {/* ── ROUND WINNERS TAB ── */}

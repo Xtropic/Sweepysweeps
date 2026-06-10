@@ -3,8 +3,22 @@ import { KNOCKOUT_STAGES } from '../lib/teams'
 import Flag from './Flag'
 import PredictionForm from './PredictionForm'
 
-export default function MatchCard({ match, prediction, onPredictionSaved }) {
-  const [expanded, setExpanded]         = useState(false)
+// Derive result label from scores
+function getResultLabel(h, a) {
+  if (h == null || a == null) return null
+  if (h > a) return 'Home win'
+  if (h < a) return 'Away win'
+  return 'Draw'
+}
+
+function signOf(h, a) {
+  if (h > a) return 1
+  if (h < a) return -1
+  return 0
+}
+
+export default function MatchCard({ match, prediction, onPredictionSaved, resultOnly = false }) {
+  const [expanded, setExpanded]           = useState(false)
   const [showBreakdown, setShowBreakdown] = useState(false)
 
   const isKnockout  = KNOCKOUT_STAGES.includes(match.stage)
@@ -13,7 +27,6 @@ export default function MatchCard({ match, prediction, onPredictionSaved }) {
   const canPredict  = match.status === 'scheduled'
   const hasPrediction = !!prediction
 
-  // Close edit form if match goes live while open
   useEffect(() => { if (!canPredict) setExpanded(false) }, [canPredict])
 
   const matchDate = match.match_date
@@ -23,11 +36,25 @@ export default function MatchCard({ match, prediction, onPredictionSaved }) {
       })
     : 'Date TBC'
 
+  // For result-only leagues compute points locally from stored prediction direction
+  const resultOnlyPoints = resultOnly && isCompleted && hasPrediction
+    && prediction.predicted_home_score != null && match.home_score != null
+    ? (signOf(prediction.predicted_home_score, prediction.predicted_away_score) ===
+       signOf(match.home_score, match.away_score) ? 1 : 0)
+    : null
+
+  const displayPoints = resultOnly ? resultOnlyPoints : prediction?.points
+
+  // "Your pick" display label
+  const pickLabel = resultOnly
+    ? getResultLabel(prediction?.predicted_home_score, prediction?.predicted_away_score)
+    : null
+
   return (
     <div className="card" style={{ marginBottom: 0, overflow: 'hidden' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
 
-        {/* Dark score card */}
+        {/* Score card */}
         <div
           className="score-card"
           style={{
@@ -36,7 +63,6 @@ export default function MatchCard({ match, prediction, onPredictionSaved }) {
             ...(isLive ? { border: '0.5px solid rgba(74,222,128,0.3)' } : {}),
           }}
         >
-
           {/* Home */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
             <Flag teamName={match.home_team?.name} size="md" style={{ flexShrink: 0 }} />
@@ -56,9 +82,7 @@ export default function MatchCard({ match, prediction, onPredictionSaved }) {
                   {match.home_score}–{match.away_score}
                 </span>
                 {match.penalty_winner_id && (
-                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>
-                    pens
-                  </div>
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>pens</div>
                 )}
               </div>
             ) : isLive ? (
@@ -99,21 +123,27 @@ export default function MatchCard({ match, prediction, onPredictionSaved }) {
               <div style={{ fontSize: 10, color: 'rgba(13,27,42,0.45)', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
                 Your pick
               </div>
-              <div style={{ fontSize: 18, fontWeight: 700, color: '#1A6B3A', lineHeight: 1.2 }}>
-                {prediction.predicted_home_score}–{prediction.predicted_away_score}
-              </div>
-              {prediction.points != null ? (
+              {resultOnly ? (
+                <div style={{ fontSize: 12, fontWeight: 600, color: '#1A6B3A', lineHeight: 1.3, marginTop: 2 }}>
+                  {pickLabel || '—'}
+                </div>
+              ) : (
+                <div style={{ fontSize: 18, fontWeight: 700, color: '#1A6B3A', lineHeight: 1.2 }}>
+                  {prediction.predicted_home_score}–{prediction.predicted_away_score}
+                </div>
+              )}
+              {displayPoints != null ? (
                 <button
                   onClick={() => setShowBreakdown(b => !b)}
                   style={{
                     fontSize: 11, fontWeight: 600, cursor: 'pointer', border: 'none',
-                    color:      prediction.points > 0 ? '#0D3D20' : 'rgba(13,27,42,0.45)',
-                    background: prediction.points > 0 ? '#C8E6D4' : '#E8E0CC',
+                    color:      displayPoints > 0 ? '#0D3D20' : 'rgba(13,27,42,0.45)',
+                    background: displayPoints > 0 ? '#C8E6D4' : '#E8E0CC',
                     borderRadius: 6, padding: '2px 7px', display: 'inline-block', marginTop: 2,
                   }}
                   title="Show points breakdown"
                 >
-                  {prediction.points}pts {showBreakdown ? '▲' : '▼'}
+                  {displayPoints}pts {showBreakdown ? '▲' : '▼'}
                 </button>
               ) : isLive ? (
                 <span style={{ fontSize: 10, color: '#4ade80', fontWeight: 600 }}>pending…</span>
@@ -145,9 +175,11 @@ export default function MatchCard({ match, prediction, onPredictionSaved }) {
         {canPredict && <CountdownTimer matchDate={match.match_date} />}
       </div>
 
-      {/* Points breakdown (expandable) */}
+      {/* Points breakdown */}
       {showBreakdown && isCompleted && hasPrediction && (
-        <PointsBreakdown prediction={prediction} match={match} isKnockout={isKnockout} />
+        resultOnly
+          ? <ResultOnlyBreakdown prediction={prediction} match={match} points={resultOnlyPoints} />
+          : <PointsBreakdown prediction={prediction} match={match} isKnockout={isKnockout} />
       )}
 
       {/* Prediction form */}
@@ -157,11 +189,44 @@ export default function MatchCard({ match, prediction, onPredictionSaved }) {
             match={match}
             existing={prediction}
             isKnockout={isKnockout}
+            resultOnly={resultOnly}
             onSaved={() => { setExpanded(false); onPredictionSaved?.() }}
             onCancel={() => setExpanded(false)}
           />
         </div>
       )}
+    </div>
+  )
+}
+
+// ── Result-only breakdown ────────────────────────────────────────────────────
+function ResultOnlyBreakdown({ prediction, match, points }) {
+  const pickLabel   = getResultLabel(prediction.predicted_home_score, prediction.predicted_away_score)
+  const actualLabel = getResultLabel(match.home_score, match.away_score)
+  const correct     = points === 1
+
+  return (
+    <div className="mt-3 pt-3" style={{ borderTop: '0.5px solid rgba(13,27,42,0.08)' }}>
+      <div style={{ fontSize: 11, fontWeight: 500, color: 'rgba(13,27,42,0.4)', marginBottom: 6 }}>
+        POINTS BREAKDOWN
+      </div>
+      <div className="flex items-center gap-2 flex-wrap" style={{ fontSize: 12 }}>
+        <span style={{ color: 'rgba(13,27,42,0.5)' }}>
+          Your pick: <strong style={{ color: '#0D1B2A' }}>{pickLabel}</strong>
+        </span>
+        <span style={{ color: 'rgba(13,27,42,0.25)' }}>·</span>
+        <span style={{ color: 'rgba(13,27,42,0.5)' }}>
+          Actual: <strong style={{ color: '#0D1B2A' }}>{actualLabel}</strong>
+        </span>
+        <span style={{ color: 'rgba(13,27,42,0.25)' }}>·</span>
+        <span style={{
+          background: correct ? '#D6EFE0' : '#F8DFDC',
+          color:      correct ? '#0D3D20' : '#7A1C12',
+          borderRadius: 6, padding: '1px 8px', fontWeight: 500,
+        }}>
+          {correct ? 'Correct result ✓' : 'Wrong result ✗'}
+        </span>
+      </div>
     </div>
   )
 }
@@ -181,15 +246,12 @@ function CountdownTimer({ matchDate }) {
   }, [matchDate])
 
   if (!diff) return null
-
-  const h  = Math.floor(diff / 3600000)
-  const m  = Math.floor((diff % 3600000) / 60000)
-  const s  = Math.floor((diff % 60000) / 1000)
+  const h = Math.floor(diff / 3600000)
+  const m = Math.floor((diff % 3600000) / 60000)
+  const s = Math.floor((diff % 60000) / 1000)
   const display = h > 0 ? `in ${h}h ${m}m` : m > 0 ? `in ${m}m ${s}s` : `in ${s}s`
-  const urgent  = diff < 30 * 60 * 1000 // < 30 min → red
-
   return (
-    <span style={{ fontWeight: 500, color: urgent ? '#C0392B' : '#D4A017' }}>
+    <span style={{ fontWeight: 500, color: diff < 30 * 60 * 1000 ? '#C0392B' : '#D4A017' }}>
       {display}
     </span>
   )
@@ -206,28 +268,28 @@ function PulsingDot() {
   )
 }
 
-// ── Points breakdown panel ───────────────────────────────────────────────────
+// ── Points breakdown (exact score mode) ─────────────────────────────────────
 function PointsBreakdown({ prediction, match, isKnockout }) {
   const ph = prediction.predicted_home_score
   const pa = prediction.predicted_away_score
   const ah = match.home_score
   const aa = match.away_score
 
-  const getResult = (h, a) => h > a ? 'home' : h < a ? 'away' : 'draw'
-  const isExact       = ph === ah && pa === aa
+  const getResult  = (h, a) => h > a ? 'home' : h < a ? 'away' : 'draw'
+  const isExact    = ph === ah && pa === aa
   const correctResult = getResult(ph, pa) === getResult(ah, aa)
-  const within1       = correctResult && Math.abs(ph - ah) <= 1 && Math.abs(pa - aa) <= 1
-  const penBonus      = isKnockout
+  const within1    = correctResult && Math.abs(ph - ah) <= 1 && Math.abs(pa - aa) <= 1
+  const penBonus   = isKnockout
     && !!match.penalty_winner_id
     && !!prediction.predicted_penalty_winner_id
     && prediction.predicted_penalty_winner_id === match.penalty_winner_id
 
   const tier = isExact ? 'exact' : within1 ? 'within1' : correctResult ? 'correct' : 'wrong'
   const TIERS = {
-    exact:   { label: 'Exact score ✓',              bg: '#D6EFE0', color: '#0D3D20' },
+    exact:   { label: 'Exact score ✓',               bg: '#D6EFE0', color: '#0D3D20' },
     within1: { label: 'Correct result + within 1 ✓', bg: '#D6EFE0', color: '#0D3D20' },
-    correct: { label: 'Correct result ✓',            bg: '#F5E6B0', color: '#8B6A0A' },
-    wrong:   { label: 'Wrong result ✗',              bg: '#F8DFDC', color: '#7A1C12' },
+    correct: { label: 'Correct result ✓',             bg: '#F5E6B0', color: '#8B6A0A' },
+    wrong:   { label: 'Wrong result ✗',               bg: '#F8DFDC', color: '#7A1C12' },
   }
   const { label, bg, color } = TIERS[tier]
 
