@@ -56,6 +56,13 @@ export default function LeaguePage() {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [togglingPaid, setTogglingPaid]   = useState(null)
 
+  // Settings editor state
+  const [editingSettings, setEditingSettings] = useState(false)
+  const [settingsName, setSettingsName]       = useState('')
+  const [settingsPrizeType, setSettingsPrizeType] = useState('none')
+  const [savingSettings, setSavingSettings]   = useState(false)
+  const [settingsError, setSettingsError]     = useState('')
+
   // Rounds tab state
   const [roundsData, setRoundsData]       = useState([])
   const [roundPayments, setRoundPayments] = useState({})
@@ -221,6 +228,25 @@ export default function LeaguePage() {
     navigate('/leagues')
   }
 
+  function openSettings() {
+    setSettingsName(league.name)
+    setSettingsPrizeType(league.prize_type || 'none')
+    setSettingsError('')
+    setEditingSettings(true)
+  }
+
+  async function saveSettings() {
+    if (settingsName.trim().length < 2) { setSettingsError('Name must be at least 2 characters'); return }
+    setSavingSettings(true); setSettingsError('')
+    const { error } = await supabase.from('leagues')
+      .update({ name: settingsName.trim(), prize_type: settingsPrizeType })
+      .eq('id', id)
+    if (error) { setSettingsError(error.message); setSavingSettings(false); return }
+    await loadLeague()
+    setSavingSettings(false)
+    setEditingSettings(false)
+  }
+
   function handleTabChange(tab) {
     setActiveTab(tab)
     if (tab === 'predictions' && lockedMatches.length === 0 && members.length > 0) {
@@ -310,6 +336,78 @@ export default function LeaguePage() {
           </div>
         </div>
       </div>
+
+      {/* Settings panel — admin only */}
+      {isAdmin && (
+        <div className="mb-5">
+          {editingSettings ? (
+            <div className="card" style={{ border: '1.5px solid rgba(13,27,42,0.15)' }}>
+              <div style={{ fontSize: 15, fontWeight: 500, color: '#0D1B2A', marginBottom: 16 }}>League settings</div>
+
+              {/* Name */}
+              <div style={{ marginBottom: 16 }}>
+                <label className="label">League name</label>
+                <input
+                  type="text" className="input" maxLength={60}
+                  value={settingsName} onChange={e => setSettingsName(e.target.value)}
+                />
+              </div>
+
+              {/* Prize type */}
+              <div style={{ marginBottom: 16 }}>
+                <label className="label" style={{ marginBottom: 8 }}>Prize money</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {[
+                    { value: 'none',       title: 'No prize money',              desc: 'Playing for fun.' },
+                    { value: 'tournament', title: 'Prize money — whole tournament', desc: 'One-off entry fee; overall Paid/Unpaid per member.' },
+                    { value: 'per_round',  title: 'Prize money — per round',     desc: 'Separate fee per round; tracked in the Round winners tab.' },
+                  ].map(opt => {
+                    const sel = settingsPrizeType === opt.value
+                    return (
+                      <div key={opt.value} onClick={() => setSettingsPrizeType(opt.value)}
+                        style={{
+                          display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer',
+                          padding: '10px 12px', borderRadius: 8,
+                          border: `1.5px solid ${sel ? 'rgba(212,160,23,0.6)' : 'rgba(13,27,42,0.1)'}`,
+                          background: sel ? '#FFFDF4' : 'white', transition: 'all 0.15s',
+                        }}>
+                        <div style={{
+                          flexShrink: 0, marginTop: 2,
+                          width: 16, height: 16, borderRadius: '50%',
+                          border: `2px solid ${sel ? '#D4A017' : 'rgba(13,27,42,0.25)'}`,
+                          background: sel ? '#D4A017' : 'white',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}>
+                          {sel && <div style={{ width: 5, height: 5, borderRadius: '50%', background: 'white' }} />}
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 13, fontWeight: 500, color: '#0D1B2A' }}>{opt.title}</div>
+                          <div style={{ fontSize: 12, color: 'rgba(13,27,42,0.5)', marginTop: 1 }}>{opt.desc}</div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {settingsError && <p style={{ fontSize: 13, color: '#C0392B', marginBottom: 12 }}>{settingsError}</p>}
+
+              <div className="flex gap-2">
+                <button onClick={saveSettings} disabled={savingSettings} className="btn-primary" style={{ fontSize: 13 }}>
+                  {savingSettings ? 'Saving…' : 'Save changes'}
+                </button>
+                <button onClick={() => setEditingSettings(false)} className="btn-secondary" style={{ fontSize: 13 }}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button onClick={openSettings} className="btn-secondary" style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 15 }}>⚙</span> Edit league settings
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex gap-2 mb-5 overflow-x-auto pb-1">
