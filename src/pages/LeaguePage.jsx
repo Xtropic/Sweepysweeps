@@ -77,6 +77,12 @@ export default function LeaguePage() {
   const [savingSettings, setSavingSettings]           = useState(false)
   const [settingsError, setSettingsError]             = useState('')
 
+  // Current-round payment state (shown inline on standings)
+  const [currentRoundLabel, setCurrentRoundLabel]     = useState(null)
+  const [currentRoundNumber, setCurrentRoundNumber]   = useState(null)
+  const [currentRoundPayments, setCurrentRoundPayments] = useState({}) // { userId: bool }
+  const [togglingCurrentRound, setTogglingCurrentRound] = useState(null)
+
   // Rounds tab state
   const [roundsData, setRoundsData]       = useState([])
   const [roundPayments, setRoundPayments] = useState({})
@@ -110,6 +116,9 @@ export default function LeaguePage() {
       await computeResultOnlyPoints(sorted)
     } else {
       setLeagueMemberPoints(null)
+    }
+    if (hasRoundPrize(lg?.prize_type)) {
+      await loadCurrentRoundPayments(lg.id)
     }
     setLoading(false)
   }
@@ -264,6 +273,63 @@ export default function LeaguePage() {
       )
     setRoundPayments(prev => ({ ...prev, [key]: !currentPaid }))
     setTogglingRoundPaid(null)
+  }
+
+  async function loadCurrentRoundPayments(leagueId) {
+    const [{ data: matchData }, { data: paymentsData }] = await Promise.all([
+      supabase.from('matches').select('id, stage, group_name, match_number, status'),
+      supabase.from('league_round_payments').select('*').eq('league_id', leagueId),
+    ])
+
+    const withRounds = assignRounds(matchData || [])
+    const roundsMap = {}
+    for (const m of withRounds) {
+      if (!m._round) continue
+      if (!roundsMap[m._round]) roundsMap[m._round] = { matches: [], order: getRoundOrder(m._round) }
+      roundsMap[m._round].matches.push(m)
+    }
+
+    // Current round = highest-order round with ≥1 non-scheduled match
+    const startedRounds = Object.entries(roundsMap)
+      .filter(([, v]) => v.matches.some(m => m.status !== 'scheduled'))
+      .sort((a, b) => b[1].order - a[1].order)
+
+    if (!startedRounds.length) {
+      setCurrentRoundLabel(null)
+      setCurrentRoundNumber(null)
+      setCurrentRoundPayments({})
+      return
+    }
+
+    const [label] = startedRounds[0]
+    setCurrentRoundLabel(label)
+
+    // Round number = 1-indexed position among all started rounds (ascending order)
+    const ascendedStarted = [...startedRounds].sort((a, b) => a[1].order - b[1].order)
+    setCurrentRoundNumber(ascendedStarted.findIndex(([l]) => l === label) + 1)
+
+    // Build payment maps
+    const currentMap = {}
+    const allMap = {}
+    for (const p of paymentsData || []) {
+      allMap[`${p.user_id}_${p.round_label}`] = p.paid
+      if (p.round_label === label) currentMap[p.user_id] = p.paid
+    }
+    setCurrentRoundPayments(currentMap)
+    setRoundPayments(allMap)
+  }
+
+  async function toggleCurrentRoundPaid(memberId, currentPaid) {
+    if (!currentRoundLabel) return
+    setTogglingCurrentRound(memberId)
+    await supabase.from('league_round_payments').upsert(
+      { league_id: id, user_id: memberId, round_label: currentRoundLabel, paid: !currentPaid },
+      { onConflict: 'league_id,user_id,round_label' }
+    )
+    setCurrentRoundPayments(prev => ({ ...prev, [memberId]: !currentPaid }))
+    const key = `${memberId}_${currentRoundLabel}`
+    setRoundPayments(prev => ({ ...prev, [key]: !currentPaid }))
+    setTogglingCurrentRound(null)
   }
 
   async function leaveLeague() {
@@ -560,27 +626,6 @@ export default function LeaguePage() {
       {/* ── STANDINGS TAB ── */}
       {activeTab === 'standings' && (
         <>
-          {/* When both prize types active, remind admin round payments are in Rounds tab */}
-          {league.prize_type === 'both' && (
-            <div style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
-              background: '#FFFDF4', border: '1px solid rgba(212,160,23,0.3)',
-              borderRadius: 10, padding: '10px 14px', marginBottom: 14,
-              fontSize: 13, color: '#8B6A0A',
-            }}>
-              <span>Round-by-round payments are tracked separately.</span>
-              <button
-                onClick={() => handleTabChange('rounds')}
-                style={{
-                  fontSize: 12, fontWeight: 600, flexShrink: 0,
-                  background: '#D4A017', color: 'white',
-                  border: 'none', borderRadius: 6, padding: '4px 10px', cursor: 'pointer',
-                }}
-              >
-                View round payments
-              </button>
-            </div>
-          )}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 24 }}>
             {rankedMembers.map((member, i) => {
               const isMe = member.id === user.id
@@ -607,7 +652,7 @@ export default function LeaguePage() {
                     {pts}
                     <span style={{ fontSize: 11, color: 'rgba(13,27,42,0.45)', fontWeight: 400, marginLeft: 3 }}>pts</span>
                   </div>
-                  {/* Paid status — tournament prize only (per_round tracked in Round winners tab) */}
+                  {/* Tournament paid toggle */}
                   {hasTournamentPrize(league.prize_type) && isAdmin ? (
                     <button
                       onClick={() => togglePaid(member.id, member.paid)}
@@ -619,7 +664,7 @@ export default function LeaguePage() {
                         color: member.paid ? '#0D3D20' : '#7A1C12',
                         opacity: togglingPaid === member.id ? 0.5 : 1,
                       }}
-                      title="Toggle paid status"
+                      title="Toggle tournament paid status"
                     >
                       {member.paid ? 'Paid' : 'Unpaid'}
                     </button>
@@ -633,6 +678,36 @@ export default function LeaguePage() {
                       {member.paid ? 'Paid' : 'Unpaid'}
                     </span>
                   ) : null}
+                  {/* Per-round paid toggle for current round */}
+                  {hasRoundPrize(league.prize_type) && currentRoundLabel && (() => {
+                    const rPaid = currentRoundPayments[member.id] ?? false
+                    const rLabel = `R${currentRoundNumber}`
+                    return isAdmin ? (
+                      <button
+                        onClick={() => toggleCurrentRoundPaid(member.id, rPaid)}
+                        disabled={togglingCurrentRound === member.id}
+                        style={{
+                          fontSize: 11, fontWeight: 600, cursor: 'pointer', flexShrink: 0,
+                          border: 'none', borderRadius: 6, padding: '3px 8px',
+                          background: rPaid ? '#D6EFE0' : '#F8DFDC',
+                          color: rPaid ? '#0D3D20' : '#7A1C12',
+                          opacity: togglingCurrentRound === member.id ? 0.5 : 1,
+                        }}
+                        title={`Toggle ${rLabel} paid status`}
+                      >
+                        {rPaid ? `${rLabel} Paid` : `${rLabel} Unpaid`}
+                      </button>
+                    ) : (
+                      <span style={{
+                        fontSize: 11, fontWeight: 600, flexShrink: 0,
+                        borderRadius: 6, padding: '3px 8px',
+                        background: rPaid ? '#D6EFE0' : '#F8DFDC',
+                        color: rPaid ? '#0D3D20' : '#7A1C12',
+                      }}>
+                        {rPaid ? `${rLabel} Paid` : `${rLabel} Unpaid`}
+                      </span>
+                    )
+                  })()}
                   {isAdmin && !isMe && (
                     <button onClick={() => removeMember(member.id)}
                       style={{ fontSize: 12, color: 'rgba(13,27,42,0.3)', marginLeft: 4, cursor: 'pointer' }}
