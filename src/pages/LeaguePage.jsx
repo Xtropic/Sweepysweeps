@@ -35,6 +35,15 @@ function assignRounds(matches) {
   return matches
 }
 
+const hasTournamentPrize = (pt) => pt === 'tournament' || pt === 'both'
+const hasRoundPrize      = (pt) => pt === 'per_round'  || pt === 'both'
+function toPrizeType(tournament, perRound) {
+  if (tournament && perRound) return 'both'
+  if (tournament) return 'tournament'
+  if (perRound)   return 'per_round'
+  return 'none'
+}
+
 function getRoundOrder(label) {
   if (label.startsWith('Group Stage – Matchday ')) return parseInt(label.slice(-1)) - 1
   for (let i = 1; i < STAGE_ORDER.length; i++) {
@@ -57,11 +66,12 @@ export default function LeaguePage() {
   const [togglingPaid, setTogglingPaid]   = useState(null)
 
   // Settings editor state
-  const [editingSettings, setEditingSettings] = useState(false)
-  const [settingsName, setSettingsName]       = useState('')
-  const [settingsPrizeType, setSettingsPrizeType] = useState('none')
-  const [savingSettings, setSavingSettings]   = useState(false)
-  const [settingsError, setSettingsError]     = useState('')
+  const [editingSettings, setEditingSettings]     = useState(false)
+  const [settingsName, setSettingsName]           = useState('')
+  const [settingsTournament, setSettingsTournament] = useState(false)
+  const [settingsPerRound, setSettingsPerRound]   = useState(false)
+  const [savingSettings, setSavingSettings]       = useState(false)
+  const [settingsError, setSettingsError]         = useState('')
 
   // Rounds tab state
   const [roundsData, setRoundsData]       = useState([])
@@ -229,8 +239,10 @@ export default function LeaguePage() {
   }
 
   function openSettings() {
+    const pt = league.prize_type || 'none'
     setSettingsName(league.name)
-    setSettingsPrizeType(league.prize_type || 'none')
+    setSettingsTournament(hasTournamentPrize(pt))
+    setSettingsPerRound(hasRoundPrize(pt))
     setSettingsError('')
     setEditingSettings(true)
   }
@@ -239,7 +251,7 @@ export default function LeaguePage() {
     if (settingsName.trim().length < 2) { setSettingsError('Name must be at least 2 characters'); return }
     setSavingSettings(true); setSettingsError('')
     const { error } = await supabase.from('leagues')
-      .update({ name: settingsName.trim(), prize_type: settingsPrizeType })
+      .update({ name: settingsName.trim(), prize_type: toPrizeType(settingsTournament, settingsPerRound) })
       .eq('id', id)
     if (error) { setSettingsError(error.message); setSavingSettings(false); return }
     await loadLeague()
@@ -296,12 +308,12 @@ export default function LeaguePage() {
           <h1 style={{ fontSize: 18, color: '#0D1B2A', marginBottom: 2 }}>{league.name}</h1>
           <p style={{ fontSize: 13, color: 'rgba(13,27,42,0.5)' }}>
             {members.length} member{members.length !== 1 ? 's' : ''}
-            {league.prize_type === 'tournament' && (
+            {hasTournamentPrize(league.prize_type) && (
               <span style={{ marginLeft: 10, fontSize: 11, background: '#F5E6B0', color: '#8B6A0A', borderRadius: 6, padding: '1px 8px', fontWeight: 500 }}>
                 Prize — Tournament
               </span>
             )}
-            {league.prize_type === 'per_round' && (
+            {hasRoundPrize(league.prize_type) && (
               <span style={{ marginLeft: 10, fontSize: 11, background: '#F5E6B0', color: '#8B6A0A', borderRadius: 6, padding: '1px 8px', fontWeight: 500 }}>
                 Prize — Per Round
               </span>
@@ -358,36 +370,39 @@ export default function LeaguePage() {
                 <label className="label" style={{ marginBottom: 8 }}>Prize money</label>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {[
-                    { value: 'none',       title: 'No prize money',              desc: 'Playing for fun.' },
-                    { value: 'tournament', title: 'Prize money — whole tournament', desc: 'One-off entry fee; overall Paid/Unpaid per member.' },
-                    { value: 'per_round',  title: 'Prize money — per round',     desc: 'Separate fee per round; tracked in the Round winners tab.' },
-                  ].map(opt => {
-                    const sel = settingsPrizeType === opt.value
-                    return (
-                      <div key={opt.value} onClick={() => setSettingsPrizeType(opt.value)}
-                        style={{
-                          display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer',
-                          padding: '10px 12px', borderRadius: 8,
-                          border: `1.5px solid ${sel ? 'rgba(212,160,23,0.6)' : 'rgba(13,27,42,0.1)'}`,
-                          background: sel ? '#FFFDF4' : 'white', transition: 'all 0.15s',
-                        }}>
-                        <div style={{
-                          flexShrink: 0, marginTop: 2,
-                          width: 16, height: 16, borderRadius: '50%',
-                          border: `2px solid ${sel ? '#D4A017' : 'rgba(13,27,42,0.25)'}`,
-                          background: sel ? '#D4A017' : 'white',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        }}>
-                          {sel && <div style={{ width: 5, height: 5, borderRadius: '50%', background: 'white' }} />}
-                        </div>
-                        <div>
-                          <div style={{ fontSize: 13, fontWeight: 500, color: '#0D1B2A' }}>{opt.title}</div>
-                          <div style={{ fontSize: 12, color: 'rgba(13,27,42,0.5)', marginTop: 1 }}>{opt.desc}</div>
-                        </div>
+                    { key: 'tournament', checked: settingsTournament, onChange: setSettingsTournament,
+                      title: 'Prize money — whole tournament', desc: 'One-off entry fee; Paid/Unpaid per member shown on Standings.' },
+                    { key: 'per_round', checked: settingsPerRound, onChange: setSettingsPerRound,
+                      title: 'Prize money — per round', desc: 'Separate fee per round; Paid/Unpaid tracked in the Round winners tab.' },
+                  ].map(opt => (
+                    <div key={opt.key} onClick={() => opt.onChange(v => !v)}
+                      style={{
+                        display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer',
+                        padding: '10px 12px', borderRadius: 8,
+                        border: `1.5px solid ${opt.checked ? 'rgba(212,160,23,0.6)' : 'rgba(13,27,42,0.1)'}`,
+                        background: opt.checked ? '#FFFDF4' : 'white', transition: 'all 0.15s',
+                      }}>
+                      <div style={{
+                        flexShrink: 0, marginTop: 2,
+                        width: 16, height: 16, borderRadius: 4,
+                        border: `2px solid ${opt.checked ? '#D4A017' : 'rgba(13,27,42,0.25)'}`,
+                        background: opt.checked ? '#D4A017' : 'white',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}>
+                        {opt.checked && <span style={{ color: 'white', fontSize: 11, fontWeight: 700, lineHeight: 1 }}>✓</span>}
                       </div>
-                    )
-                  })}
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 500, color: '#0D1B2A' }}>{opt.title}</div>
+                        <div style={{ fontSize: 12, color: 'rgba(13,27,42,0.5)', marginTop: 1 }}>{opt.desc}</div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
+                {(settingsTournament || settingsPerRound) && (
+                  <div style={{ fontSize: 12, color: '#8B6A0A', background: '#F5E6B0', borderRadius: 6, padding: '5px 10px', marginTop: 8 }}>
+                    This app does not handle or hold any money — fees are managed between members directly.
+                  </div>
+                )}
               </div>
 
               {settingsError && <p style={{ fontSize: 13, color: '#C0392B', marginBottom: 12 }}>{settingsError}</p>}
@@ -460,8 +475,8 @@ export default function LeaguePage() {
                     {member.total_points ?? 0}
                     <span style={{ fontSize: 11, color: 'rgba(13,27,42,0.45)', fontWeight: 400, marginLeft: 3 }}>pts</span>
                   </div>
-                  {/* Paid status — tournament leagues only (per_round is tracked in Round winners tab) */}
-                  {league.prize_type === 'tournament' && isAdmin ? (
+                  {/* Paid status — tournament prize only (per_round tracked in Round winners tab) */}
+                  {hasTournamentPrize(league.prize_type) && isAdmin ? (
                     <button
                       onClick={() => togglePaid(member.id, member.paid)}
                       disabled={togglingPaid === member.id}
@@ -476,7 +491,7 @@ export default function LeaguePage() {
                     >
                       {member.paid ? 'Paid' : 'Unpaid'}
                     </button>
-                  ) : league.prize_type === 'tournament' ? (
+                  ) : hasTournamentPrize(league.prize_type) ? (
                     <span style={{
                       fontSize: 11, fontWeight: 600, flexShrink: 0,
                       borderRadius: 6, padding: '3px 8px',
@@ -540,7 +555,7 @@ export default function LeaguePage() {
           </div>
         ) : (
           <>
-            {league.prize_type === 'per_round' && (
+            {hasRoundPrize(league.prize_type) && (
               <div style={{
                 fontSize: 12, color: '#8B6A0A', background: '#F5E6B0',
                 borderRadius: 8, padding: '8px 14px', marginBottom: 16,
@@ -622,7 +637,7 @@ export default function LeaguePage() {
                             <span style={{ fontSize: 11, fontWeight: 400, marginLeft: 2 }}>pts</span>
                           </span>
                           {/* Per-round payment tracking */}
-                          {league.prize_type === 'per_round' && (
+                          {hasRoundPrize(league.prize_type) && (
                             isAdmin ? (
                               <button
                                 onClick={() => toggleRoundPaid(mp.id, round, isPaid)}

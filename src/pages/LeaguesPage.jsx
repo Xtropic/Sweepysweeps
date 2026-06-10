@@ -103,27 +103,30 @@ export default function LeaguesPage() {
   )
 }
 
-const PRIZE_OPTIONS = [
+function toPrizeType(tournament, perRound) {
+  if (tournament && perRound) return 'both'
+  if (tournament) return 'tournament'
+  if (perRound)   return 'per_round'
+  return 'none'
+}
+
+const PRIZE_CHECKBOXES = [
   {
-    value: 'none',
-    title: 'No prize money',
-    desc: 'Playing for fun — no entry fees or prize tracking needed.',
-  },
-  {
-    value: 'tournament',
+    key: 'tournament',
     title: 'Prize money — whole tournament',
-    desc: 'Each member pays a one-off entry fee. The admin tracks who has paid with a Paid / Unpaid tag per member.',
+    desc: 'One-off entry fee per member. Paid/Unpaid status shown on the Standings tab.',
   },
   {
-    value: 'per_round',
+    key: 'per_round',
     title: 'Prize money — per round',
-    desc: 'Members pay a separate fee for each round (e.g. Matchday 1, Matchday 2, Round of 16…). The admin can mark each member as paid or unpaid for every round individually.',
+    desc: 'Separate entry fee for each round. Tracked individually in the Round winners tab.',
   },
 ]
 
 function CreateLeagueForm({ userId, onCreated, onCancel }) {
   const [name, setName] = useState('')
-  const [prizeType, setPrizeType] = useState('none')
+  const [prizeTournament, setPrizeTournament] = useState(false)
+  const [prizePerRound, setPrizePerRound]     = useState(false)
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
 
@@ -131,12 +134,15 @@ function CreateLeagueForm({ userId, onCreated, onCancel }) {
     e.preventDefault()
     if (name.trim().length < 2) { setError('Name must be at least 2 characters'); return }
     setSaving(true); setError('')
+    const prizeType = toPrizeType(prizeTournament, prizePerRound)
     const { data: league, error: err } = await supabase
       .from('leagues').insert({ name: name.trim(), admin_user_id: userId, prize_type: prizeType }).select().single()
     if (err) { setError(err.message); setSaving(false); return }
     await supabase.from('league_members').insert({ league_id: league.id, user_id: userId })
     setSaving(false); onCreated()
   }
+
+  const anyPrize = prizeTournament || prizePerRound
 
   return (
     <div className="card mb-6">
@@ -149,52 +155,44 @@ function CreateLeagueForm({ userId, onCreated, onCancel }) {
             placeholder="e.g. Office sweepstake, Sunday league lads…" maxLength={60} />
         </div>
 
-        {/* Prize type selector */}
+        {/* Prize type — independent checkboxes */}
         <div>
-          <label className="label" style={{ marginBottom: 8 }}>Prize money</label>
+          <label className="label" style={{ marginBottom: 4 }}>Prize money</label>
+          <p style={{ fontSize: 12, color: 'rgba(13,27,42,0.45)', marginBottom: 10 }}>
+            Select any that apply — both can be enabled at once.
+          </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {PRIZE_OPTIONS.map(opt => {
-              const selected = prizeType === opt.value
+            {PRIZE_CHECKBOXES.map(({ key, title, desc }) => {
+              const checked = key === 'tournament' ? prizeTournament : prizePerRound
+              const toggle  = key === 'tournament' ? setPrizeTournament : setPrizePerRound
               return (
-                <div
-                  key={opt.value}
-                  onClick={() => setPrizeType(opt.value)}
+                <div key={key} onClick={() => toggle(v => !v)}
                   style={{
                     display: 'flex', alignItems: 'flex-start', gap: 12, cursor: 'pointer',
                     padding: '12px 14px', borderRadius: 10,
-                    border: `1.5px solid ${selected ? 'rgba(212,160,23,0.6)' : 'rgba(13,27,42,0.12)'}`,
-                    background: selected ? '#FFFDF4' : 'white',
-                    transition: 'all 0.15s',
-                  }}
-                >
-                  {/* Radio dot */}
+                    border: `1.5px solid ${checked ? 'rgba(212,160,23,0.6)' : 'rgba(13,27,42,0.12)'}`,
+                    background: checked ? '#FFFDF4' : 'white', transition: 'all 0.15s',
+                  }}>
                   <div style={{
                     flexShrink: 0, marginTop: 2,
-                    width: 18, height: 18, borderRadius: '50%',
-                    border: `2px solid ${selected ? '#D4A017' : 'rgba(13,27,42,0.25)'}`,
-                    background: selected ? '#D4A017' : 'white',
+                    width: 18, height: 18, borderRadius: 4,
+                    border: `2px solid ${checked ? '#D4A017' : 'rgba(13,27,42,0.25)'}`,
+                    background: checked ? '#D4A017' : 'white',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     transition: 'all 0.15s',
                   }}>
-                    {selected && <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'white' }} />}
+                    {checked && <span style={{ color: 'white', fontSize: 12, fontWeight: 700, lineHeight: 1 }}>✓</span>}
                   </div>
                   <div>
-                    <div style={{ fontSize: 14, fontWeight: 500, color: '#0D1B2A', marginBottom: 3 }}>
-                      {opt.title}
-                    </div>
-                    <div style={{ fontSize: 13, color: 'rgba(13,27,42,0.55)', lineHeight: 1.5 }}>
-                      {opt.desc}
-                    </div>
+                    <div style={{ fontSize: 14, fontWeight: 500, color: '#0D1B2A', marginBottom: 3 }}>{title}</div>
+                    <div style={{ fontSize: 13, color: 'rgba(13,27,42,0.55)', lineHeight: 1.5 }}>{desc}</div>
                   </div>
                 </div>
               )
             })}
           </div>
-          {prizeType !== 'none' && (
-            <div style={{
-              marginTop: 8, fontSize: 12, color: '#8B6A0A',
-              background: '#F5E6B0', borderRadius: 6, padding: '6px 12px',
-            }}>
+          {anyPrize && (
+            <div style={{ marginTop: 8, fontSize: 12, color: '#8B6A0A', background: '#F5E6B0', borderRadius: 6, padding: '6px 12px' }}>
               This app does not handle or hold any money — entry fees are managed between members directly.
             </div>
           )}
