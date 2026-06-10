@@ -1,24 +1,17 @@
 import { useEffect, useRef } from 'react'
 
-/**
- * AdBanner — Google AdSense wrapper with a styled placeholder fallback.
- *
- * HOW TO ACTIVATE REAL ADS:
- *  1. Sign up at https://adsense.google.com
- *  2. Add your site and wait for approval (~1–3 days)
- *  3. Create ad units in your AdSense dashboard
- *  4. Set VITE_ADSENSE_CLIENT in your .env file:
- *       VITE_ADSENSE_CLIENT=ca-pub-XXXXXXXXXXXXXXXXX
- *  5. Replace the slot prop values in each page with your real ad slot IDs
- *
- * Until then the component renders a clearly-labelled placeholder banner.
- *
- * Sizes:
- *  leaderboard  — 728×90   (desktop top/bottom strip)
- *  rectangle    — 336×280  (sidebar / between content)
- *  mobile       — 320×50   (mobile bottom strip)
- *  responsive   — 100%×auto (adapts to container — recommended)
- */
+// HOW TO ACTIVATE REAL ADS:
+//  1. Sign up at https://adsense.google.com and get your publisher ID
+//  2. Add your site and wait for approval (~1–3 days)
+//  3. Create ad units in your AdSense dashboard
+//  4. Set VITE_ADSENSE_CLIENT in your .env AND in Vercel's Environment Variables:
+//       VITE_ADSENSE_CLIENT=ca-pub-XXXXXXXXXXXXXXXXX
+//  5. Replace the slot="" prop values in each page with your real ad slot IDs
+//  Sizes:
+//  leaderboard  — 728×90   (desktop top/bottom strip)
+//  rectangle    — 336×280  (sidebar / between content)
+//  mobile       — 320×50   (mobile bottom strip)
+//  responsive   — 100%×auto (adapts to container — recommended)
 
 const SIZES = {
   leaderboard: { width: 728, height: 90 },
@@ -27,7 +20,22 @@ const SIZES = {
   responsive:  { width: '100%', height: 90 },
 }
 
-const CLIENT = import.meta.env.VITE_ADSENSE_CLIENT // e.g. ca-pub-XXXXXXXXXXXXXXXXX
+const CLIENT = import.meta.env.VITE_ADSENSE_CLIENT
+
+// Inject the AdSense <script> once into <head> when the client ID is available.
+// Using a module-level flag so multiple AdBanner instances don't duplicate it.
+let scriptInjected = false
+function ensureAdSenseScript(clientId) {
+  if (scriptInjected || !clientId) return
+  if (document.querySelector('script[data-adsense]')) { scriptInjected = true; return }
+  const s = document.createElement('script')
+  s.async = true
+  s.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${clientId}`
+  s.crossOrigin = 'anonymous'
+  s.setAttribute('data-adsense', '1')
+  document.head.appendChild(s)
+  scriptInjected = true
+}
 
 export default function AdBanner({ slot, size = 'responsive', style = {} }) {
   const adRef  = useRef(null)
@@ -36,9 +44,10 @@ export default function AdBanner({ slot, size = 'responsive', style = {} }) {
   const adsReady = !!CLIENT && !!slot
 
   useEffect(() => {
-    if (!adsReady || pushed.current) return
+    if (!adsReady) return
+    ensureAdSenseScript(CLIENT)
+    if (pushed.current) return
     try {
-      // Push the ad unit once the component mounts
       ;(window.adsbygoogle = window.adsbygoogle || []).push({})
       pushed.current = true
     } catch (e) {

@@ -61,16 +61,19 @@ export default function AdminPage() {
 }
 
 function getRoundOrder(label) {
-  if (label === 'Group Stage – Matchday 1') return 1
-  if (label === 'Group Stage – Matchday 2') return 2
-  if (label === 'Group Stage – Matchday 3') return 3
-  if (label === 'Round of 32') return 4
-  if (label === 'Round of 16') return 5
-  if (label === 'Quarter-Finals') return 6
-  if (label === 'Semi-Finals') return 7
-  if (label === 'Third Place Play-off') return 8
-  if (label === 'Final') return 9
+  if (label.startsWith('Group Stage – Matchday ')) return parseInt(label.slice(-1))
+  if (label === 'Round of 32')         return 4
+  if (label === 'Round of 16')         return 5
+  if (label === 'Quarter-final')       return 6
+  if (label === 'Semi-final')          return 7
+  if (label === 'Third Place Play-off')return 8
+  if (label === 'Final')               return 9
   return 99
+}
+
+function roundShortLabel(label) {
+  const order = getRoundOrder(label)
+  return order < 99 ? `R${order}` : label
 }
 
 const hasRoundPrize = (pt) => pt === 'per_round' || pt === 'both'
@@ -258,7 +261,6 @@ function LeagueAdminCard({ league, currentUserId, onDeleted }) {
           roundGroups[p.round_label][p.user_id] = p.paid
         }
         const sortedRounds = Object.keys(roundGroups).sort((a, b) => getRoundOrder(a) - getRoundOrder(b))
-        const allRoundLabels = ['Group Stage – Matchday 1', 'Group Stage – Matchday 2', 'Group Stage – Matchday 3', 'Round of 32', 'Round of 16', 'Quarter-Finals', 'Semi-Finals', 'Third Place Play-off', 'Final']
 
         return (
           <div style={{ borderTop: '0.5px solid rgba(13,27,42,0.08)' }}>
@@ -281,8 +283,7 @@ function LeagueAdminCard({ league, currentUserId, onDeleted }) {
                     No round payments recorded yet.
                   </div>
                 ) : sortedRounds.map((roundLabel, ri) => {
-                  const roundIdx = allRoundLabels.indexOf(roundLabel)
-                  const shortLabel = roundIdx >= 0 ? `R${roundIdx + 1}` : roundLabel
+                  const shortLabel = roundShortLabel(roundLabel)
                   return (
                     <div key={roundLabel} style={{
                       marginBottom: 10,
