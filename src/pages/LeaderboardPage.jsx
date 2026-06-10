@@ -3,11 +3,13 @@ import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import AdBanner from '../components/AdBanner'
+import RoundHistory from '../components/RoundHistory'
 
 const TABS = [
   { key: 'global',            label: 'All players' },
   { key: 'my_league',         label: 'My leagues' },
   { key: 'league_of_leagues', label: 'League of leagues' },
+  { key: 'round_winners',     label: 'Round winners' },
 ]
 
 // Rank badge colours from design guide
@@ -55,6 +57,7 @@ export default function LeaderboardPage() {
       {tab === 'global'            && <GlobalTab userId={user?.id} />}
       {tab === 'my_league'         && <MyLeaguesTab userId={user?.id} />}
       {tab === 'league_of_leagues' && <LeagueOfLeaguesTab />}
+      {tab === 'round_winners'     && <RoundHistory />}
     </div>
   )
 }

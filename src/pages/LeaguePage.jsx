@@ -20,6 +20,7 @@ export default function LeaguePage() {
   const [copied, setCopied]       = useState(false)
   const [confirmLeave, setConfirmLeave]   = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [togglingPaid, setTogglingPaid]   = useState(null)
 
   // Predictions tab state
   const [activeTab, setActiveTab]         = useState('standings')
@@ -36,12 +37,12 @@ export default function LeaguePage() {
     const [{ data: lg }, { data: memberData }] = await Promise.all([
       supabase.from('leagues').select('*').eq('id', id).single(),
       supabase.from('league_members')
-        .select('user_id, joined_at, profiles(id, username, total_points)')
+        .select('user_id, joined_at, paid, profiles(id, username, total_points)')
         .eq('league_id', id).order('joined_at', { ascending: true }),
     ])
     setLeague(lg)
     const sorted = (memberData || [])
-      .map(m => ({ ...m.profiles, joined_at: m.joined_at }))
+      .map(m => ({ ...m.profiles, joined_at: m.joined_at, paid: m.paid }))
       .sort((a, b) => (b.total_points || 0) - (a.total_points || 0))
     setMembers(sorted)
     setLoading(false)
@@ -84,6 +85,15 @@ export default function LeaguePage() {
   async function removeMember(memberId) {
     await supabase.from('league_members').delete().eq('league_id', id).eq('user_id', memberId)
     loadLeague()
+  }
+
+  async function togglePaid(memberId, currentPaid) {
+    setTogglingPaid(memberId)
+    await supabase.from('league_members')
+      .update({ paid: !currentPaid })
+      .eq('league_id', id).eq('user_id', memberId)
+    await loadLeague()
+    setTogglingPaid(null)
   }
 
   async function leaveLeague() {
@@ -216,6 +226,32 @@ export default function LeaguePage() {
                     {member.total_points ?? 0}
                     <span style={{ fontSize: 11, color: 'rgba(13,27,42,0.45)', fontWeight: 400, marginLeft: 3 }}>pts</span>
                   </div>
+                  {/* Paid status — clickable for admin, badge-only for others */}
+                  {isAdmin ? (
+                    <button
+                      onClick={() => togglePaid(member.id, member.paid)}
+                      disabled={togglingPaid === member.id}
+                      style={{
+                        fontSize: 11, fontWeight: 600, cursor: 'pointer', flexShrink: 0,
+                        border: 'none', borderRadius: 6, padding: '3px 8px',
+                        background: member.paid ? '#D6EFE0' : '#F8DFDC',
+                        color: member.paid ? '#0D3D20' : '#7A1C12',
+                        opacity: togglingPaid === member.id ? 0.5 : 1,
+                      }}
+                      title="Toggle paid status"
+                    >
+                      {member.paid ? 'Paid' : 'Unpaid'}
+                    </button>
+                  ) : (
+                    <span style={{
+                      fontSize: 11, fontWeight: 600, flexShrink: 0,
+                      borderRadius: 6, padding: '3px 8px',
+                      background: member.paid ? '#D6EFE0' : '#F8DFDC',
+                      color: member.paid ? '#0D3D20' : '#7A1C12',
+                    }}>
+                      {member.paid ? 'Paid' : 'Unpaid'}
+                    </span>
+                  )}
                   {isAdmin && !isMe && (
                     <button onClick={() => removeMember(member.id)}
                       style={{ fontSize: 12, color: 'rgba(13,27,42,0.3)', marginLeft: 4, cursor: 'pointer' }}

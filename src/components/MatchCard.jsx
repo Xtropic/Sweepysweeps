@@ -88,28 +88,35 @@ export default function MatchCard({ match, prediction, onPredictionSaved }) {
         </div>
 
         {/* Right column: prediction + action */}
-        <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, width: 68 }}>
+        <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, width: 72 }}>
           {hasPrediction && (
-            <div style={{ textAlign: 'center', width: '100%' }}>
-              <div style={{ fontSize: 10, color: 'rgba(13,27,42,0.45)', fontWeight: 500 }}>Your pick</div>
-              <div style={{ fontSize: 13, fontWeight: 500, color: '#1A6B3A' }}>
+            <div style={{
+              textAlign: 'center', width: '100%',
+              background: isCompleted ? 'transparent' : 'rgba(26,107,58,0.08)',
+              border: isCompleted ? 'none' : '1px solid rgba(26,107,58,0.2)',
+              borderRadius: 8, padding: isCompleted ? '0' : '6px 4px',
+            }}>
+              <div style={{ fontSize: 10, color: 'rgba(13,27,42,0.45)', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                Your pick
+              </div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: '#1A6B3A', lineHeight: 1.2 }}>
                 {prediction.predicted_home_score}–{prediction.predicted_away_score}
               </div>
               {prediction.points != null ? (
                 <button
                   onClick={() => setShowBreakdown(b => !b)}
                   style={{
-                    fontSize: 10, fontWeight: 500, cursor: 'pointer', border: 'none',
-                    color:      prediction.points > 0 ? '#0D3D20' : 'rgba(13,27,42,0.4)',
-                    background: prediction.points > 0 ? '#D6EFE0' : '#E8E0CC',
-                    borderRadius: 6, padding: '1px 6px', display: 'inline-block',
+                    fontSize: 11, fontWeight: 600, cursor: 'pointer', border: 'none',
+                    color:      prediction.points > 0 ? '#0D3D20' : 'rgba(13,27,42,0.45)',
+                    background: prediction.points > 0 ? '#C8E6D4' : '#E8E0CC',
+                    borderRadius: 6, padding: '2px 7px', display: 'inline-block', marginTop: 2,
                   }}
                   title="Show points breakdown"
                 >
                   {prediction.points}pts {showBreakdown ? '▲' : '▼'}
                 </button>
               ) : isLive ? (
-                <span style={{ fontSize: 10, color: '#4ade80', fontWeight: 500 }}>pending…</span>
+                <span style={{ fontSize: 10, color: '#4ade80', fontWeight: 600 }}>pending…</span>
               ) : null}
             </div>
           )}

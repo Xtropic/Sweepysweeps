@@ -1,172 +1,230 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
-import { STAGE_LABELS, KNOCKOUT_STAGES } from '../lib/teams'
-import { calculatePoints } from '../lib/scoring'
-import Flag from '../components/Flag'
-
-const STAGE_ORDER = ['group', 'round_of_32', 'round_of_16', 'quarter_final', 'semi_final', 'third_place', 'final']
 
 export default function AdminPage() {
-  const { profile } = useAuth()
-  const [matches, setMatches] = useState([])
+  const { user } = useAuth()
+  const navigate = useNavigate()
+  const [leagues, setLeagues] = useState([])
   const [loading, setLoading] = useState(true)
-  const [activeStage, setActiveStage] = useState('group')
-  const [saving, setSaving] = useState(null)
-  const [msg, setMsg] = useState('')
 
-  useEffect(() => { loadMatches() }, [])
+  useEffect(() => { loadLeagues() }, [user])
 
-  async function loadMatches() {
+  async function loadLeagues() {
     const { data } = await supabase
-      .from('matches')
-      .select('*, home_team:teams!matches_home_team_id_fkey(*), away_team:teams!matches_away_team_id_fkey(*)')
-      .order('match_number', { ascending: true })
-    setMatches(data || [])
+      .from('leagues')
+      .select('*, league_members(user_id, paid, profiles(id, username, total_points))')
+      .eq('admin_user_id', user.id)
+      .order('created_at', { ascending: false })
+    setLeagues(data || [])
     setLoading(false)
   }
 
-  if (!profile?.is_admin) {
-    return <div className="max-w-2xl mx-auto px-4 py-16 text-center" style={{ color: 'rgba(13,27,42,0.45)' }}>Access denied. Admin only.</div>
-  }
-
-  const stages = [...new Set((matches || []).map(m => m.stage))]
-    .sort((a, b) => STAGE_ORDER.indexOf(a) - STAGE_ORDER.indexOf(b))
-  const stageMatches = matches.filter(m => m.stage === activeStage)
+  if (loading) return <div className="text-center py-16" style={{ color: 'rgba(13,27,42,0.4)' }}>Loading…</div>
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6">
-      {/* Page header */}
+    <div className="max-w-2xl mx-auto px-4 py-6">
       <div className="flex items-center gap-4 mb-6">
         <img src="/logo.png?v=2" alt="Sweepy" style={{ height: 48, width: 48, borderRadius: 12, objectFit: 'cover', flexShrink: 0 }} />
         <div>
-          <h1 style={{ fontSize: 18, color: '#0D1B2A', marginBottom: 2 }}>Admin Panel</h1>
-          <p style={{ fontSize: 13, color: 'rgba(13,27,42,0.5)' }}>Enter match results to calculate player points.</p>
+          <h1 style={{ fontSize: 18, color: '#0D1B2A', marginBottom: 2 }}>My leagues</h1>
+          <p style={{ fontSize: 13, color: 'rgba(13,27,42,0.5)' }}>Manage leagues you created.</p>
         </div>
       </div>
 
-      {msg && (
-        <div className="rounded-card mb-4 px-4 py-3" style={{ background: '#D6EFE0', color: '#0D3D20', fontSize: 13 }}>{msg}</div>
-      )}
-
-      <div className="flex gap-1.5 overflow-x-auto pb-1 mb-6">
-        {stages.map(stage => (
-          <button key={stage} onClick={() => setActiveStage(stage)}
-            className="rounded-badge flex-shrink-0 whitespace-nowrap transition-colors"
-            style={{
-              padding: '5px 12px', fontSize: 13, fontWeight: 500,
-              background: activeStage === stage ? '#0D1B2A' : '#E8E0CC',
-              color: activeStage === stage ? 'white' : 'rgba(13,27,42,0.65)',
-            }}>
-            {STAGE_LABELS[stage] || stage}
+      {leagues.length === 0 ? (
+        <div className="card text-center" style={{ padding: '40px 24px' }}>
+          <div style={{ fontSize: 32, marginBottom: 12 }}>🏆</div>
+          <div style={{ fontSize: 15, fontWeight: 500, color: '#0D1B2A', marginBottom: 6 }}>No leagues yet</div>
+          <div style={{ fontSize: 13, color: 'rgba(13,27,42,0.5)', marginBottom: 20 }}>
+            Create a league to invite friends and compete together.
+          </div>
+          <button onClick={() => navigate('/leagues')} className="btn-primary" style={{ fontSize: 13 }}>
+            Go to Leagues
           </button>
-        ))}
-      </div>
-
-      {loading ? (
-        <div className="text-center py-16" style={{ color: 'rgba(13,27,42,0.4)' }}>Loading…</div>
+        </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {stageMatches.map(match => (
-            <ResultForm key={match.id} match={match} saving={saving === match.id}
-              onSave={async (result) => {
-                setSaving(match.id); setMsg('')
-                await saveResult(match, result)
-                setSaving(null)
-                setMsg(`Result saved for ${match.home_team?.name} vs ${match.away_team?.name}`)
-                loadMatches()
-              }} />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {leagues.map(league => (
+            <LeagueAdminCard
+              key={league.id}
+              league={league}
+              currentUserId={user.id}
+              onDeleted={loadLeagues}
+            />
           ))}
-          {stageMatches.length === 0 && (
-            <p className="text-center py-8" style={{ color: 'rgba(13,27,42,0.4)', fontSize: 16 }}>No matches for this stage yet.</p>
-          )}
         </div>
       )}
     </div>
   )
 }
 
-async function saveResult(match, { homeScore, awayScore, penWinnerId }) {
-  const { error: matchErr } = await supabase
-    .from('matches').update({ home_score: homeScore, away_score: awayScore, penalty_winner_id: penWinnerId || null, status: 'completed' })
-    .eq('id', match.id)
-  if (matchErr) { console.error(matchErr); return }
+function LeagueAdminCard({ league, currentUserId, onDeleted }) {
+  const navigate = useNavigate()
+  const rawMembers = (league.league_members || [])
+    .filter(m => m.profiles)
+    .map(m => ({ ...m.profiles, paid: m.paid }))
+    .sort((a, b) => (b.total_points || 0) - (a.total_points || 0))
 
-  const { data: preds } = await supabase.from('predictions').select('*').eq('match_id', match.id)
-  if (!preds || preds.length === 0) return
+  const [copied, setCopied] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [removingId, setRemovingId] = useState(null)
+  const [togglingId, setTogglingId] = useState(null)
+  const [localMembers, setLocalMembers] = useState(rawMembers)
 
-  const updatedMatch = { ...match, home_score: homeScore, away_score: awayScore, penalty_winner_id: penWinnerId || null, status: 'completed' }
-  await Promise.all(preds.map(p =>
-    supabase.from('predictions').update({ points: calculatePoints(p, updatedMatch) }).eq('id', p.id)
-  ))
+  async function copyCode() {
+    await navigator.clipboard.writeText(league.invite_code)
+    setCopied(true); setTimeout(() => setCopied(false), 2000)
+  }
 
-  const userIds = [...new Set(preds.map(p => p.user_id))]
-  await Promise.all(userIds.map(async (uid) => {
-    const { data: allPreds } = await supabase.from('predictions').select('points').eq('user_id', uid).not('points', 'is', null)
-    const total = (allPreds || []).reduce((sum, p) => sum + (p.points || 0), 0)
-    await supabase.from('profiles').update({ total_points: total }).eq('id', uid)
-  }))
-}
+  async function removeMember(memberId) {
+    setRemovingId(memberId)
+    await supabase.from('league_members').delete().eq('league_id', league.id).eq('user_id', memberId)
+    setLocalMembers(prev => prev.filter(m => m.id !== memberId))
+    setRemovingId(null)
+  }
 
-function ResultForm({ match, saving, onSave }) {
-  const isKnockout = KNOCKOUT_STAGES.includes(match.stage)
-  const [homeScore, setHomeScore] = useState(match.home_score ?? '')
-  const [awayScore, setAwayScore] = useState(match.away_score ?? '')
-  const [penWinner, setPenWinner] = useState(match.penalty_winner_id ?? '')
-  const [error, setError] = useState('')
+  async function togglePaid(memberId, currentPaid) {
+    setTogglingId(memberId)
+    await supabase.from('league_members')
+      .update({ paid: !currentPaid })
+      .eq('league_id', league.id).eq('user_id', memberId)
+    setLocalMembers(prev => prev.map(m => m.id === memberId ? { ...m, paid: !currentPaid } : m))
+    setTogglingId(null)
+  }
 
-  const showPenPicker = isKnockout && homeScore !== '' && awayScore !== '' && parseInt(homeScore) === parseInt(awayScore)
-
-  function handleSubmit(e) {
-    e.preventDefault(); setError('')
-    const hs = parseInt(homeScore), as_ = parseInt(awayScore)
-    if (isNaN(hs) || isNaN(as_) || hs < 0 || as_ < 0) { setError('Invalid scores'); return }
-    if (showPenPicker && !penWinner) { setError('Please select penalty winner'); return }
-    onSave({ homeScore: hs, awayScore: as_, penWinnerId: showPenPicker ? penWinner : null })
+  async function deleteLeague() {
+    await supabase.from('leagues').delete().eq('id', league.id)
+    onDeleted()
   }
 
   return (
-    <div className="card">
-      <div className="flex items-center gap-2 mb-4 flex-wrap">
-        <Flag teamName={match.home_team?.name} size="sm" />
-        <span style={{ fontSize: 14, fontWeight: 500 }}>{match.home_team?.name || 'TBD'}</span>
-        <span style={{ color: 'rgba(13,27,42,0.35)', fontSize: 13 }}>vs</span>
-        <span style={{ fontSize: 14, fontWeight: 500 }}>{match.away_team?.name || 'TBD'}</span>
-        <Flag teamName={match.away_team?.name} size="sm" />
-        {match.group_name && (
-          <span className="badge badge-group ml-auto">Group {match.group_name}</span>
-        )}
-        {match.status === 'completed' && (
-          <span className="badge badge-qualified" style={{ marginLeft: match.group_name ? 4 : 'auto' }}>Result saved</span>
+    <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+      {/* League header */}
+      <div style={{ padding: '16px 16px 12px', borderBottom: '0.5px solid rgba(13,27,42,0.08)' }}>
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <div style={{ fontSize: 16, fontWeight: 500, color: '#0D1B2A', marginBottom: 2 }}>{league.name}</div>
+            <div style={{ fontSize: 12, color: 'rgba(13,27,42,0.45)' }}>
+              {localMembers.length} member{localMembers.length !== 1 ? 's' : ''}
+            </div>
+          </div>
+          <button
+            onClick={() => navigate(`/leagues/${league.id}`)}
+            className="btn-secondary"
+            style={{ fontSize: 12, padding: '5px 12px', flexShrink: 0 }}
+          >
+            View league
+          </button>
+        </div>
+
+        {/* Invite code */}
+        <div className="flex items-center gap-3 mt-3">
+          <span style={{
+            fontFamily: 'monospace', fontSize: 17, fontWeight: 500, letterSpacing: '0.15em',
+            background: '#E8E0CC', color: '#0D1B2A', padding: '6px 14px', borderRadius: 8,
+          }}>
+            {league.invite_code}
+          </span>
+          <button onClick={copyCode} className="btn-secondary" style={{ padding: '6px 12px', fontSize: 12 }}>
+            {copied ? '✓ Copied' : 'Copy code'}
+          </button>
+        </div>
+      </div>
+
+      {/* Members list */}
+      <div>
+        {localMembers.length === 0 ? (
+          <div style={{ padding: '20px 16px', textAlign: 'center', fontSize: 13, color: 'rgba(13,27,42,0.4)' }}>
+            No members yet — share the invite code above.
+          </div>
+        ) : (
+          localMembers.map((member, i) => {
+            const isMe = member.id === currentUserId
+            return (
+              <div key={member.id} style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                padding: '10px 16px',
+                borderBottom: i < localMembers.length - 1 ? '0.5px solid rgba(13,27,42,0.06)' : 'none',
+                background: isMe ? 'rgba(26,107,58,0.03)' : 'white',
+              }}>
+                {/* Rank */}
+                <span style={{
+                  fontSize: 12, fontWeight: 500, minWidth: 20, color: 'rgba(13,27,42,0.35)',
+                }}>
+                  #{i + 1}
+                </span>
+
+                {/* Name */}
+                <span style={{ flex: 1, fontSize: 14, fontWeight: isMe ? 500 : 400, color: isMe ? '#1A6B3A' : '#0D1B2A', minWidth: 0 }}
+                  className="truncate">
+                  {member.username || 'Anonymous'}
+                  {isMe && <span style={{ fontSize: 11, color: 'rgba(13,27,42,0.4)', marginLeft: 6 }}>(you)</span>}
+                  {isMe && (
+                    <span className="badge badge-group" style={{ marginLeft: 6 }}>admin</span>
+                  )}
+                </span>
+
+                {/* Points */}
+                <span style={{ fontSize: 14, fontWeight: 500, color: '#0D1B2A', flexShrink: 0 }}>
+                  {member.total_points ?? 0}
+                  <span style={{ fontSize: 11, color: 'rgba(13,27,42,0.45)', fontWeight: 400, marginLeft: 3 }}>pts</span>
+                </span>
+
+                {/* Paid toggle */}
+                <button
+                  onClick={() => togglePaid(member.id, member.paid)}
+                  disabled={togglingId === member.id}
+                  style={{
+                    fontSize: 11, fontWeight: 600, cursor: 'pointer', flexShrink: 0,
+                    border: 'none', borderRadius: 6, padding: '3px 8px',
+                    background: member.paid ? '#D6EFE0' : '#F8DFDC',
+                    color: member.paid ? '#0D3D20' : '#7A1C12',
+                    opacity: togglingId === member.id ? 0.5 : 1,
+                  }}
+                  title="Toggle paid status"
+                >
+                  {member.paid ? 'Paid' : 'Unpaid'}
+                </button>
+
+                {/* Remove button (not for self) */}
+                {!isMe && (
+                  <button
+                    onClick={() => removeMember(member.id)}
+                    disabled={removingId === member.id}
+                    style={{
+                      fontSize: 12, color: 'rgba(13,27,42,0.3)', cursor: 'pointer',
+                      background: 'none', border: 'none', padding: '2px 4px',
+                      flexShrink: 0,
+                    }}
+                    title={`Remove ${member.username}`}
+                  >
+                    {removingId === member.id ? '…' : '✕'}
+                  </button>
+                )}
+              </div>
+            )
+          })
         )}
       </div>
 
-      <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-3">
-        <div>
-          <label className="label">{match.home_team?.name || 'Home'} score</label>
-          <input type="number" min="0" max="99" className="input text-center" style={{ width: 80 }}
-            value={homeScore} onChange={e => setHomeScore(e.target.value)} placeholder="0" />
-        </div>
-        <div>
-          <label className="label">{match.away_team?.name || 'Away'} score</label>
-          <input type="number" min="0" max="99" className="input text-center" style={{ width: 80 }}
-            value={awayScore} onChange={e => setAwayScore(e.target.value)} placeholder="0" />
-        </div>
-        {showPenPicker && (
-          <div>
-            <label className="label">Penalty winner</label>
-            <select className="input" value={penWinner} onChange={e => setPenWinner(e.target.value)}>
-              <option value="">Select…</option>
-              <option value={match.home_team_id}>{match.home_team?.name}</option>
-              <option value={match.away_team_id}>{match.away_team?.name}</option>
-            </select>
+      {/* Danger zone */}
+      <div style={{ padding: '12px 16px', borderTop: '0.5px solid rgba(13,27,42,0.08)', background: 'rgba(13,27,42,0.02)' }}>
+        {confirmDelete ? (
+          <div className="flex items-center gap-2 flex-wrap">
+            <span style={{ fontSize: 13, color: 'rgba(13,27,42,0.55)' }}>
+              Delete "{league.name}"? This can't be undone.
+            </span>
+            <button onClick={deleteLeague} className="btn-danger" style={{ fontSize: 12, padding: '5px 12px' }}>Delete</button>
+            <button onClick={() => setConfirmDelete(false)} className="btn-secondary" style={{ fontSize: 12, padding: '5px 12px' }}>Cancel</button>
           </div>
+        ) : (
+          <button onClick={() => setConfirmDelete(true)} className="btn-danger" style={{ fontSize: 12, padding: '5px 12px' }}>
+            Delete league
+          </button>
         )}
-        <button type="submit" disabled={saving} className="btn-primary">
-          {saving ? 'Saving…' : 'Save result & calculate points'}
-        </button>
-      </form>
-      {error && <p style={{ fontSize: 13, color: '#C0392B', marginTop: 8 }}>{error}</p>}
+      </div>
     </div>
   )
 }

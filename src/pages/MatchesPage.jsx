@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { STAGE_LABELS } from '../lib/teams'
 import MatchCard from '../components/MatchCard'
 import AdBanner from '../components/AdBanner'
+import RoundLeaderBanner from '../components/RoundLeaderBanner'
 
 const STAGE_ORDER = ['group', 'round_of_32', 'round_of_16', 'quarter_final', 'semi_final', 'third_place', 'final']
 
@@ -132,6 +133,9 @@ export default function MatchesPage() {
           <div style={{ fontSize: 11, color: 'rgba(13,27,42,0.45)', fontWeight: 500 }}>total points</div>
         </div>
       </div>
+
+      {/* Round leader alert */}
+      <RoundLeaderBanner />
 
       {/* Ad banner */}
       <AdBanner slot="1234567890" size="responsive" style={{ marginBottom: 20 }} />

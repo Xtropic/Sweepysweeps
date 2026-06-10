@@ -40,7 +40,10 @@
       "mcp__58d0f910-b605-4d84-8575-387415aac0e9__list_edge_functions",
       "mcp__58d0f910-b605-4d84-8575-387415aac0e9__get_edge_function",
       "WebFetch(domain:lcyxfuewlkmqodyyegqv.supabase.co)",
-      "mcp__58d0f910-b605-4d84-8575-387415aac0e9__get_logs"
+      "mcp__58d0f910-b605-4d84-8575-387415aac0e9__get_logs",
+      "Bash(claude mcp *)",
+      "PowerShell(\\(Get-Command claude -ErrorAction SilentlyContinue\\).Source; \\(Get-Command claude.exe -ErrorAction SilentlyContinue\\).Source)",
+      "mcp__visualize__read_me"
     ]
   }
 }
