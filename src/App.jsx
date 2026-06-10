@@ -9,6 +9,7 @@ import LeaguesPage from './pages/LeaguesPage'
 import LeaguePage from './pages/LeaguePage'
 import AdminPage from './pages/AdminPage'
 import BracketPage from './pages/BracketPage'
+import AuthCallbackPage from './pages/AuthCallbackPage'
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth()
@@ -38,6 +39,7 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <Routes>
+          <Route path="/auth/callback" element={<AuthCallbackPage />} />
           <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
           <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
           <Route path="/matches" element={<PrivateRoute><Layout><MatchesPage /></Layout></PrivateRoute>} />
