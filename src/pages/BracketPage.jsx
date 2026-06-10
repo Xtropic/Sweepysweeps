@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import Flag from '../components/Flag'
+import AdBanner from '../components/AdBanner'
 
 const STAGE_ORDER = ['round_of_32', 'round_of_16', 'quarter_final', 'semi_final', 'final']
 const STAGE_LABELS = {
@@ -65,6 +66,8 @@ export default function BracketPage() {
           </button>
         ))}
       </div>
+
+      <AdBanner slot="2233445566" size="responsive" style={{ marginBottom: 20 }} />
 
       {loading ? (
         <div className="text-center py-20" style={{ color: 'rgba(13,27,42,0.4)' }}>Loading…</div>

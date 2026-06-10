@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
+import AdBanner from '../components/AdBanner'
 
 export default function LeaguesPage() {
   const { user } = useAuth()
@@ -51,6 +52,8 @@ export default function LeaguesPage() {
           <button onClick={() => setView('create')} className="btn-primary">+ Create</button>
         </div>
       </div>
+
+      <AdBanner slot="3344556677" size="responsive" style={{ marginBottom: 20 }} />
 
       {view === 'create' && (
         <CreateLeagueForm userId={user.id} onCreated={() => { setView('list'); loadMyLeagues() }} onCancel={() => setView('list')} />

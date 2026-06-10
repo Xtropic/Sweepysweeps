@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { STAGE_LABELS } from '../lib/teams'
@@ -226,32 +226,36 @@ export default function MatchesPage() {
       ) : activeGroup === 'schedule' ? (
         // ── Chronological view with date headers ─────────────────────────────
         <div className="flex flex-col" style={{ gap: 24 }}>
-          {groupByDate(displayMatches).map(({ date, matches: dayMatches }) => (
-            <div key={date}>
-              <div style={{
-                fontSize: 12, fontWeight: 600, color: 'rgba(13,27,42,0.45)',
-                textTransform: 'uppercase', letterSpacing: '0.06em',
-                marginBottom: 10, paddingBottom: 6,
-                borderBottom: '1px solid rgba(13,27,42,0.08)',
-              }}>
-                {date}
-              </div>
-              <div className="flex flex-col" style={{ gap: 10 }}>
-                {dayMatches.map(match => (
-                  <div key={match.id}>
-                    {/* Group label above each card in schedule view */}
-                    <div style={{ fontSize: 11, color: 'rgba(13,27,42,0.4)', fontWeight: 500, marginBottom: 4 }}>
-                      Group {match.group_name}
+          {groupByDate(displayMatches).map(({ date, matches: dayMatches }, sectionIndex) => (
+            <React.Fragment key={date}>
+              <div>
+                <div style={{
+                  fontSize: 12, fontWeight: 600, color: 'rgba(13,27,42,0.45)',
+                  textTransform: 'uppercase', letterSpacing: '0.06em',
+                  marginBottom: 10, paddingBottom: 6,
+                  borderBottom: '1px solid rgba(13,27,42,0.08)',
+                }}>
+                  {date}
+                </div>
+                <div className="flex flex-col" style={{ gap: 10 }}>
+                  {dayMatches.map(match => (
+                    <div key={match.id}>
+                      <div style={{ fontSize: 11, color: 'rgba(13,27,42,0.4)', fontWeight: 500, marginBottom: 4 }}>
+                        Group {match.group_name}
+                      </div>
+                      <MatchCard
+                        match={match}
+                        prediction={predictions[match.id]}
+                        onPredictionSaved={loadData}
+                      />
                     </div>
-                    <MatchCard
-                      match={match}
-                      prediction={predictions[match.id]}
-                      onPredictionSaved={loadData}
-                    />
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
+              {(sectionIndex + 1) % 3 === 0 && (
+                <AdBanner slot="4455667788" size="responsive" />
+              )}
+            </React.Fragment>
           ))}
         </div>
       ) : (
