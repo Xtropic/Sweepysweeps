@@ -14,7 +14,7 @@ export default function AdminPage() {
   async function loadLeagues() {
     const { data } = await supabase
       .from('leagues')
-      .select('*, has_prize_money, league_members(user_id, paid, profiles(id, username, total_points))')
+      .select('*, prize_type, league_members(user_id, paid, profiles(id, username, total_points))')
       .eq('admin_user_id', user.id)
       .order('created_at', { ascending: false })
     setLeagues(data || [])
@@ -106,9 +106,20 @@ function LeagueAdminCard({ league, currentUserId, onDeleted }) {
         <div className="flex items-center justify-between gap-3">
           <div>
             <div style={{ fontSize: 16, fontWeight: 500, color: '#0D1B2A', marginBottom: 2 }}>{league.name}</div>
-            <div style={{ fontSize: 12, color: 'rgba(13,27,42,0.45)' }}>
+            <div style={{ fontSize: 12, color: 'rgba(13,27,42,0.45)', display: 'flex', alignItems: 'center', gap: 8 }}>
               {localMembers.length} member{localMembers.length !== 1 ? 's' : ''}
+              {league.prize_type === 'tournament' && (
+                <span style={{ background: '#F5E6B0', color: '#8B6A0A', borderRadius: 4, padding: '1px 6px', fontSize: 11, fontWeight: 500 }}>Tournament prize</span>
+              )}
+              {league.prize_type === 'per_round' && (
+                <span style={{ background: '#F5E6B0', color: '#8B6A0A', borderRadius: 4, padding: '1px 6px', fontSize: 11, fontWeight: 500 }}>Per-round prize</span>
+              )}
             </div>
+            {league.prize_type === 'per_round' && (
+              <div style={{ fontSize: 12, color: '#8B6A0A', marginTop: 4 }}>
+                Round-by-round payment tracking is in the <strong>Round winners</strong> tab on the league page.
+              </div>
+            )}
           </div>
           <button
             onClick={() => navigate(`/leagues/${league.id}`)}
@@ -172,8 +183,8 @@ function LeagueAdminCard({ league, currentUserId, onDeleted }) {
                   <span style={{ fontSize: 11, color: 'rgba(13,27,42,0.45)', fontWeight: 400, marginLeft: 3 }}>pts</span>
                 </span>
 
-                {/* Paid toggle — only for prize money leagues */}
-                {league.has_prize_money && <button
+                {/* Paid toggle — tournament leagues only; per_round is managed in the league's Round winners tab */}
+                {league.prize_type === 'tournament' && <button
                   onClick={() => togglePaid(member.id, member.paid)}
                   disabled={togglingId === member.id}
                   style={{
