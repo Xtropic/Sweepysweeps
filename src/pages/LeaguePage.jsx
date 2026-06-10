@@ -141,7 +141,7 @@ export default function LeaguePage() {
       supabase.from('matches').select('id, stage, group_name, match_number, status'),
       supabase.from('predictions').select('user_id, match_id, points').not('points', 'is', null).in('user_id', memberIds),
     ]
-    if (league.prize_type === 'per_round') {
+    if (hasRoundPrize(league.prize_type)) {
       queries.push(supabase.from('league_round_payments').select('*').eq('league_id', id))
     }
 
@@ -450,6 +450,27 @@ export default function LeaguePage() {
       {/* ── STANDINGS TAB ── */}
       {activeTab === 'standings' && (
         <>
+          {/* When both prize types active, remind admin round payments are in Rounds tab */}
+          {league.prize_type === 'both' && (
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+              background: '#FFFDF4', border: '1px solid rgba(212,160,23,0.3)',
+              borderRadius: 10, padding: '10px 14px', marginBottom: 14,
+              fontSize: 13, color: '#8B6A0A',
+            }}>
+              <span>Round-by-round payments are tracked separately.</span>
+              <button
+                onClick={() => handleTabChange('rounds')}
+                style={{
+                  fontSize: 12, fontWeight: 600, flexShrink: 0,
+                  background: '#D4A017', color: 'white',
+                  border: 'none', borderRadius: 6, padding: '4px 10px', cursor: 'pointer',
+                }}
+              >
+                View round payments
+              </button>
+            </div>
+          )}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 24 }}>
             {members.map((member, i) => {
               const isMe = member.id === user.id
