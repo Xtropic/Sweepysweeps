@@ -6,6 +6,7 @@ import { STAGE_LABELS, KNOCKOUT_STAGES } from '../lib/teams'
 import Flag from '../components/Flag'
 import LeagueChat from '../components/LeagueChat'
 import LeagueMatchesTab from '../components/LeagueMatchesTab'
+import BracketPicker from '../components/BracketPicker'
 import AdBanner from '../components/AdBanner'
 
 const STAGE_ORDER = ['group', 'round_of_32', 'round_of_16', 'quarter_final', 'semi_final', 'third_place', 'final']
@@ -393,6 +394,7 @@ export default function LeaguePage() {
 
   const isAdmin = league.admin_user_id === user.id
   const isResultOnly = league.prediction_style === 'result_only'
+  const isBracket = league.prediction_style === 'tournament_bracket'
 
   // For result_only leagues use per-league computed points; otherwise use global
   const getMemberPts = (member) =>
@@ -540,8 +542,9 @@ export default function LeaguePage() {
                 <label className="label" style={{ marginBottom: 8 }}>Prediction style</label>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {[
-                    { value: 'exact_score', title: 'Exact score', desc: 'Members predict the final score (e.g. 2–1). 5 pts exact, 3 pts correct result within 1 goal, 1 pt correct result.' },
-                    { value: 'result_only', title: 'Result only (Win / Draw / Lose)', desc: 'Members predict just the outcome. 1 pt for correct result.' },
+                    { value: 'exact_score',        title: 'Exact score',           desc: 'Members predict the final score (e.g. 2–1). 5 pts exact, 3 pts correct result within 1 goal, 1 pt correct result.' },
+                    { value: 'result_only',        title: 'Result only (Win / Draw / Lose)', desc: 'Members predict just the outcome. 1 pt for correct result.' },
+                    { value: 'tournament_bracket', title: 'Tournament bracket',    desc: 'Pick group finishing order + knockout winners for the whole tournament. 2 pts per correct group position, 5 pts per correct knockout winner.' },
                   ].map(opt => {
                     const sel = settingsPredStyle === opt.value
                     return (
@@ -594,7 +597,12 @@ export default function LeaguePage() {
         <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(13,27,42,0.45)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
           How points work in this league
         </div>
-        {isResultOnly ? (
+        {isBracket ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <ScoreRule pts={2} label="Correct group position (any place, 1st–4th)" />
+            <ScoreRule pts={5} label="Correct knockout winner (any round)" />
+          </div>
+        ) : isResultOnly ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <ScoreRule pts={1} label="Correct result (Home win / Draw / Away win)" />
             <div style={{ fontSize: 12, color: 'rgba(13,27,42,0.45)', marginTop: 4 }}>
@@ -614,11 +622,13 @@ export default function LeaguePage() {
       {/* Tabs */}
       <div className="flex gap-2 mb-5 overflow-x-auto pb-1">
         {[
-          { key: 'standings',   label: 'Standings'     },
-          { key: 'matches',     label: 'Matches'       },
-          { key: 'rounds',      label: 'Round winners' },
-          { key: 'predictions', label: 'Predictions'   },
-          { key: 'chat',        label: '💬 Chat'       },
+          { key: 'standings',   label: 'Standings'       },
+          ...(isBracket ? [{ key: 'my_bracket', label: 'My Bracket' }] : [
+            { key: 'matches',     label: 'Matches'       },
+            { key: 'rounds',      label: 'Round winners' },
+            { key: 'predictions', label: 'Predictions'   },
+          ]),
+          { key: 'chat',        label: '💬 Chat'         },
         ].map(({ key, label }) => (
           <button key={key} onClick={() => handleTabChange(key)}
             style={{
@@ -896,6 +906,11 @@ export default function LeaguePage() {
             </div>
           </>
         )
+      )}
+
+      {/* ── MY BRACKET TAB ── */}
+      {activeTab === 'my_bracket' && (
+        <BracketPicker leagueId={id} />
       )}
 
       {/* ── CHAT TAB ── */}
