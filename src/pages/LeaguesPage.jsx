@@ -204,7 +204,7 @@ function CreateLeagueForm({ userId, onCreated, onCancel }) {
           <label className="label" style={{ marginBottom: 4 }}>Prediction style</label>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {[
-              { value: 'exact_score', title: 'Exact score', desc: 'Predict the final score (e.g. 2–1). 3 pts exact, 1 pt correct result.' },
+              { value: 'exact_score', title: 'Exact score', desc: 'Predict the final score (e.g. 2–1). 5 pts exact, 3 pts correct result within 1 goal, 1 pt correct result.' },
               { value: 'result_only', title: 'Result only (Win / Draw / Lose)', desc: 'Just pick the outcome. 1 pt for the correct result.' },
             ].map(opt => {
               const sel = predStyle === opt.value

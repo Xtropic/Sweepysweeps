@@ -531,7 +531,7 @@ export default function LeaguePage() {
                 <label className="label" style={{ marginBottom: 8 }}>Prediction style</label>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {[
-                    { value: 'exact_score', title: 'Exact score', desc: 'Members predict the final score (e.g. 2–1). 3 pts for exact score, 1 pt for correct result.' },
+                    { value: 'exact_score', title: 'Exact score', desc: 'Members predict the final score (e.g. 2–1). 5 pts exact, 3 pts correct result within 1 goal, 1 pt correct result.' },
                     { value: 'result_only', title: 'Result only (Win / Draw / Lose)', desc: 'Members predict just the outcome. 1 pt for correct result.' },
                   ].map(opt => {
                     const sel = settingsPredStyle === opt.value
@@ -594,7 +594,8 @@ export default function LeaguePage() {
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <ScoreRule pts={3} label="Exact score correct" />
+            <ScoreRule pts={5} label="Exact score" />
+            <ScoreRule pts={3} label="Correct result + score within 1 goal each side" />
             <ScoreRule pts={1} label="Correct result only (Home win / Draw / Away win)" />
             <ScoreRule pts={0} label="Wrong result" />
           </div>
