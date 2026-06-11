@@ -682,21 +682,22 @@ export default function LeaguePage() {
                     </span>
                   ) : null}
                   {/* Per-round paid toggle for current round */}
-                  {hasRoundPrize(league.prize_type) && currentRoundLabel && (() => {
+                  {hasRoundPrize(league.prize_type) && (() => {
                     const rPaid = currentRoundPayments[member.id] ?? false
-                    const rLabel = `R${currentRoundNumber}`
+                    const rLabel = currentRoundNumber ? `R${currentRoundNumber}` : 'R1'
+                    const canToggle = !!currentRoundLabel
                     return isAdmin ? (
                       <button
-                        onClick={() => toggleCurrentRoundPaid(member.id, rPaid)}
-                        disabled={togglingCurrentRound === member.id}
+                        onClick={() => canToggle && toggleCurrentRoundPaid(member.id, rPaid)}
+                        disabled={togglingCurrentRound === member.id || !canToggle}
                         style={{
-                          fontSize: 11, fontWeight: 600, cursor: 'pointer', flexShrink: 0,
+                          fontSize: 11, fontWeight: 600, cursor: canToggle ? 'pointer' : 'default', flexShrink: 0,
                           border: 'none', borderRadius: 6, padding: '3px 8px',
                           background: rPaid ? '#D6EFE0' : '#F8DFDC',
                           color: rPaid ? '#0D3D20' : '#7A1C12',
-                          opacity: togglingCurrentRound === member.id ? 0.5 : 1,
+                          opacity: (togglingCurrentRound === member.id || !canToggle) ? 0.5 : 1,
                         }}
-                        title={`Toggle ${rLabel} paid status`}
+                        title={canToggle ? `Toggle ${rLabel} paid status` : 'No round active yet'}
                       >
                         {rPaid ? `${rLabel} Paid` : `${rLabel} Unpaid`}
                       </button>
