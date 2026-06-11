@@ -182,8 +182,8 @@ export default function BracketPicker({ leagueId, isReadOnly = false, viewUserId
       const fixedSlot = R32_FIXED_SLOTS.find(s => s.slot === slot)
       if (fixedSlot) {
         return [
-          resolveSlot(fixedSlot.homeLabel, groupPicks),
-          resolveSlot(fixedSlot.awayLabel, groupPicks),
+          resolveSlot(fixedSlot.home, groupPicks),
+          resolveSlot(fixedSlot.away, groupPicks),
         ].filter(Boolean)
       }
       // Third-place slot
@@ -548,7 +548,7 @@ function KnockoutBracket({ groupPicks, knockoutPicks, thirdPicks, getSlotCandida
           const picked = knockoutPicks[`${activeStage}-${slot}`]
           const pickedTeam = picked ? findTeamById(picked) : null
           const fixedSlot = R32_FIXED_SLOTS.find(s => s.slot === slot)
-          const slotLabel = fixedSlot ? `${fixedSlot.homeLabel} vs ${fixedSlot.awayLabel}` : `Match ${slot + 1}`
+          const slotLabel = fixedSlot ? `${fixedSlot.home} vs ${fixedSlot.away}` : `Match ${slot + 1}`
 
           return (
             <div key={slot} className="card" style={{ padding: '12px 14px' }}>
