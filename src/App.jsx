@@ -21,7 +21,7 @@ function PrivateRoute({ children }) {
 function PublicRoute({ children }) {
   const { user, loading } = useAuth()
   if (loading) return <div className="min-h-screen flex items-center justify-center text-gray-500">Loading…</div>
-  if (user) return <Navigate to="/matches" replace />
+  if (user) return <Navigate to="/leagues" replace />
   return children
 }
 
@@ -48,7 +48,7 @@ export default function App() {
           <Route path="/leaderboard" element={<PrivateRoute><Layout><LeaderboardPage /></Layout></PrivateRoute>} />
           <Route path="/bracket" element={<PrivateRoute><Layout><BracketPage /></Layout></PrivateRoute>} />
           <Route path="/admin" element={<PrivateRoute><Layout><AdminPage /></Layout></PrivateRoute>} />
-          <Route path="*" element={<Navigate to="/matches" replace />} />
+          <Route path="*" element={<Navigate to="/leagues" replace />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>

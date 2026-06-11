@@ -71,7 +71,6 @@ export default function Navbar() {
 
   const links = [
     { to: '/bracket',     label: 'WC 2026',     icon: <Globe2    size={16} /> },
-    { to: '/matches',     label: 'Matches',     icon: <Swords    size={16} /> },
     { to: '/leagues',     label: 'Leagues',     icon: <Trophy    size={16} /> },
     { to: '/leaderboard', label: 'Leaderboard', icon: <BarChart2 size={16} /> },
     { to: '/admin',       label: 'Manage',      icon: <Settings  size={16} /> },
@@ -95,7 +94,7 @@ export default function Navbar() {
       <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
 
         {/* Logo */}
-        <Link to="/matches" className="flex items-center gap-2.5" style={{ textDecoration: 'none' }}>
+        <Link to="/leagues" className="flex items-center gap-2.5" style={{ textDecoration: 'none' }}>
           <img
             src="/logo.png?v=2"
             alt="Sweepy Sweep Sweep Stakes"
