@@ -11,6 +11,7 @@ export default function LeagueMatchesTab({ userId, isResultOnly }) {
   const [loading, setLoading]           = useState(true)
   const [activeStage, setActiveStage]   = useState('group')
   const [activeGroup, setActiveGroup]   = useState('schedule')
+  const [view, setView]                 = useState('upcoming') // 'upcoming' | 'past'
 
   useEffect(() => {
     loadData()
@@ -54,19 +55,28 @@ export default function LeagueMatchesTab({ userId, isResultOnly }) {
     setLoading(false)
   }
 
-  const stages = [...new Set(matches.map(m => m.stage))]
+  // Split into upcoming (scheduled + in_progress) and past (completed)
+  const upcomingMatches = matches.filter(m => m.status !== 'completed')
+  const pastMatches     = matches.filter(m => m.status === 'completed')
+
+  const activeMatches = view === 'upcoming' ? upcomingMatches : pastMatches
+
+  const stages = [...new Set(activeMatches.map(m => m.stage))]
     .sort((a, b) => STAGE_ORDER.indexOf(a) - STAGE_ORDER.indexOf(b))
 
-  const stageMatches = matches.filter(m => m.stage === activeStage)
-  const groups = activeStage === 'group'
+  // Reset activeStage if it no longer exists in the current view
+  const resolvedStage = stages.includes(activeStage) ? activeStage : (stages[0] ?? 'group')
+
+  const stageMatches = activeMatches.filter(m => m.stage === resolvedStage)
+  const groups = resolvedStage === 'group'
     ? [...new Set(stageMatches.map(m => m.group_name).filter(Boolean))].sort()
     : []
 
-  const scheduleMatches = activeStage === 'group'
+  const scheduleMatches = resolvedStage === 'group'
     ? [...stageMatches].sort((a, b) => new Date(a.match_date) - new Date(b.match_date))
     : []
 
-  const displayMatches = activeStage !== 'group'
+  const displayMatches = resolvedStage !== 'group'
     ? stageMatches
     : activeGroup === 'schedule'
       ? scheduleMatches
@@ -108,39 +118,68 @@ export default function LeagueMatchesTab({ userId, isResultOnly }) {
         </div>
       )}
 
-      {/* Stage tabs */}
-      <div className="flex gap-1.5 overflow-x-auto pb-1 mb-4">
-        {stages.map(stage => {
-          const hasLive = matches.some(m => m.stage === stage && m.status === 'in_progress')
-          return (
-            <button
-              key={stage}
-              onClick={() => {
-                setActiveStage(stage)
-                setActiveGroup(liveGroup && stage === 'group' ? liveGroup : 'schedule')
-              }}
-              className="rounded-badge flex-shrink-0 whitespace-nowrap transition-colors"
-              style={{
-                padding: '5px 12px', fontSize: 13, fontWeight: 500,
-                background: activeStage === stage ? '#0D1B2A' : '#E8E0CC',
-                color: activeStage === stage ? 'white' : 'rgba(13,27,42,0.65)',
-              }}
-            >
-              {STAGE_LABELS[stage] || stage}
-              {hasLive && (
-                <span style={{
-                  display: 'inline-block', width: 6, height: 6, borderRadius: '50%',
-                  background: '#4ade80', marginLeft: 5, verticalAlign: 'middle',
-                  animation: 'pulse 1.4s ease-in-out infinite',
-                }} />
-              )}
-            </button>
-          )
-        })}
+      {/* Upcoming / Past toggle */}
+      <div style={{
+        display: 'inline-flex', borderRadius: 10, overflow: 'hidden',
+        border: '1.5px solid rgba(13,27,42,0.15)', marginBottom: 16,
+      }}>
+        {[
+          { key: 'upcoming', label: `Upcoming (${upcomingMatches.length})` },
+          { key: 'past',     label: `Past (${pastMatches.length})` },
+        ].map(({ key, label }) => (
+          <button key={key} onClick={() => setView(key)}
+            style={{
+              padding: '7px 18px', fontSize: 13, fontWeight: 600,
+              background: view === key ? '#0D1B2A' : 'white',
+              color: view === key ? 'white' : 'rgba(13,27,42,0.6)',
+              borderRight: key === 'upcoming' ? '1.5px solid rgba(13,27,42,0.15)' : 'none',
+            }}>
+            {label}
+          </button>
+        ))}
       </div>
 
+      {/* Stage tabs */}
+      {stages.length > 0 && (
+        <div style={{ position: 'relative', marginBottom: 16 }}>
+          <div style={{
+            position: 'absolute', right: 0, top: 0, bottom: 4, width: 32, zIndex: 1, pointerEvents: 'none',
+            background: 'linear-gradient(to right, transparent, #F5F3EE)',
+          }} />
+          <div className="flex gap-1.5 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
+            {stages.map(stage => {
+              const hasLive = activeMatches.some(m => m.stage === stage && m.status === 'in_progress')
+              return (
+                <button
+                  key={stage}
+                  onClick={() => {
+                    setActiveStage(stage)
+                    setActiveGroup(liveGroup && stage === 'group' ? liveGroup : 'schedule')
+                  }}
+                  className="rounded-badge flex-shrink-0 whitespace-nowrap transition-colors"
+                  style={{
+                    padding: '5px 12px', fontSize: 13, fontWeight: 500,
+                    background: resolvedStage === stage ? '#0D1B2A' : '#E8E0CC',
+                    color: resolvedStage === stage ? 'white' : 'rgba(13,27,42,0.65)',
+                  }}
+                >
+                  {STAGE_LABELS[stage] || stage}
+                  {hasLive && (
+                    <span style={{
+                      display: 'inline-block', width: 6, height: 6, borderRadius: '50%',
+                      background: '#4ade80', marginLeft: 5, verticalAlign: 'middle',
+                      animation: 'pulse 1.4s ease-in-out infinite',
+                    }} />
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Group tabs */}
-      {activeStage === 'group' && groups.length > 0 && (
+      {resolvedStage === 'group' && groups.length > 0 && (
         <div className="flex gap-1.5 overflow-x-auto pb-1 mb-4">
           <button
             onClick={() => setActiveGroup('schedule')}
@@ -183,9 +222,9 @@ export default function LeagueMatchesTab({ userId, isResultOnly }) {
       {/* Match list */}
       {displayMatches.length === 0 ? (
         <div className="text-center py-12" style={{ color: 'rgba(13,27,42,0.4)' }}>
-          No matches available yet.
+          {view === 'past' ? 'No completed matches yet.' : 'No upcoming matches.'}
         </div>
-      ) : activeGroup === 'schedule' && activeStage === 'group' ? (
+      ) : activeGroup === 'schedule' && resolvedStage === 'group' ? (
         <div className="flex flex-col" style={{ gap: 24 }}>
           {groupByDate(displayMatches).map(({ date, matches: dayMatches }) => (
             <div key={date}>
@@ -206,7 +245,7 @@ export default function LeagueMatchesTab({ userId, isResultOnly }) {
                     <MatchCard
                       match={match}
                       prediction={predictions[match.id]}
-                      onPredictionSaved={loadData}
+                      onPredictionSaved={(matchId, saved) => setPredictions(prev => ({ ...prev, [matchId]: saved }))}
                       resultOnly={isResultOnly}
                     />
                   </div>
@@ -222,7 +261,7 @@ export default function LeagueMatchesTab({ userId, isResultOnly }) {
               key={match.id}
               match={match}
               prediction={predictions[match.id]}
-              onPredictionSaved={loadData}
+              onPredictionSaved={(matchId, saved) => setPredictions(prev => ({ ...prev, [matchId]: saved }))}
               resultOnly={isResultOnly}
             />
           ))}

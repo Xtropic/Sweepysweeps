@@ -1,38 +1,50 @@
-// WC 2026 bracket structure
-// 32 teams: top 2 from each of 12 groups (24) + 8 best 3rd-place teams
-
 export const GROUPS = ['A','B','C','D','E','F','G','H','I','J','K','L']
 
-// R32 matchups for 1st/2nd place qualifiers (24 slots, slots 0-11)
-// Paired within group pods: A-B, C-D, E-F, G-H, I-J, K-L
+// 8 fixed R32 matchups between group 1st/2nd place finishers (Matches 73,75,76,78,83,84,86,88)
 export const R32_FIXED_SLOTS = [
-  { slot: 0,  home: '1A', away: '2B' },
-  { slot: 1,  home: '1B', away: '2A' },
-  { slot: 2,  home: '1C', away: '2D' },
-  { slot: 3,  home: '1D', away: '2C' },
-  { slot: 4,  home: '1E', away: '2F' },
-  { slot: 5,  home: '1F', away: '2E' },
-  { slot: 6,  home: '1G', away: '2H' },
-  { slot: 7,  home: '1H', away: '2G' },
-  { slot: 8,  home: '1I', away: '2J' },
-  { slot: 9,  home: '1J', away: '2I' },
-  { slot: 10, home: '1K', away: '2L' },
-  { slot: 11, home: '1L', away: '2K' },
+  { slot: 0,  home: '2A', away: '2B' },  // M73
+  { slot: 2,  home: '1F', away: '2C' },  // M75
+  { slot: 3,  home: '1C', away: '2F' },  // M76
+  { slot: 5,  home: '2E', away: '2I' },  // M78
+  { slot: 10, home: '2K', away: '2L' },  // M83
+  { slot: 11, home: '1H', away: '2J' },  // M84
+  { slot: 13, home: '1J', away: '2H' },  // M86
+  { slot: 15, home: '2D', away: '2G' },  // M88
 ]
 
-// 8 slots for best 3rd-place teams (slots 12-19)
-// Each slot pairs a 3rd-place qualifier against the loser slot of a fixed R32 match
-// For bracket prediction purposes users just pick the 3rd-place team for each slot
-export const R32_THIRD_PLACE_SLOTS = [
-  { slot: 12, vsLabel: 'Best 3rd #1' },
-  { slot: 13, vsLabel: 'Best 3rd #2' },
-  { slot: 14, vsLabel: 'Best 3rd #3' },
-  { slot: 15, vsLabel: 'Best 3rd #4' },
-  { slot: 16, vsLabel: 'Best 3rd #5' },
-  { slot: 17, vsLabel: 'Best 3rd #6' },
-  { slot: 18, vsLabel: 'Best 3rd #7' },
-  { slot: 19, vsLabel: 'Best 3rd #8' },
+// 8 R32 matchups where a group winner faces one of the 8 best 3rd-place qualifiers
+// The specific 3rd-place opponent depends on which groups produce the 8 qualifiers (user picks)
+export const R32_3RD_SLOTS = [
+  { slot: 1,  winner: '1E' },  // M74
+  { slot: 4,  winner: '1I' },  // M77
+  { slot: 6,  winner: '1A' },  // M79
+  { slot: 7,  winner: '1L' },  // M80
+  { slot: 8,  winner: '1D' },  // M81
+  { slot: 9,  winner: '1G' },  // M82
+  { slot: 12, winner: '1B' },  // M85
+  { slot: 14, winner: '1K' },  // M87
 ]
+
+// Which two R32 slots feed into each R16 slot (non-sequential — official FIFA bracket draw)
+export const R16_FROM_R32 = {
+  0: [1, 4],   // M89: W(M74) vs W(M77)
+  1: [0, 2],   // M90: W(M73) vs W(M75)
+  2: [3, 5],   // M91: W(M76) vs W(M78)
+  3: [6, 7],   // M92: W(M79) vs W(M80)
+  4: [10, 11], // M93: W(M83) vs W(M84)
+  5: [8, 9],   // M94: W(M81) vs W(M82)
+  6: [13, 15], // M95: W(M86) vs W(M88)
+  7: [12, 14], // M96: W(M85) vs W(M87)
+}
+
+// Which two R16 slots feed into each QF slot (non-sequential)
+export const QF_FROM_R16 = {
+  0: [0, 1],  // M97: W(M89) vs W(M90)
+  1: [4, 5],  // M98: W(M93) vs W(M94)
+  2: [2, 3],  // M99: W(M91) vs W(M92)
+  3: [6, 7],  // M100: W(M95) vs W(M96)
+}
+// SF and Final use sequential slot*2 / slot*2+1 (both correct as-is)
 
 export const KNOCKOUT_STAGES = ['round_of_32', 'round_of_16', 'quarter_final', 'semi_final', 'final']
 
@@ -44,39 +56,27 @@ export const STAGE_LABELS = {
   final:         'Final',
 }
 
-export const BRACKET_POINTS = {
-  group_position: 2,
-  knockout_winner: 5,
-}
+export const BRACKET_POINTS = { group_position: 2, knockout_winner: 5 }
 
-// Derive position label from slot descriptor e.g. '1A' → { pos: 1, group: 'A' }
 export function parseSlot(s) {
   return { pos: parseInt(s[0]), group: s.slice(1) }
 }
 
-// Resolve which team a user picked for a given slot descriptor
-// groupPicks: { [group]: { 1: teamObj, 2: teamObj, 3: teamObj, 4: teamObj } }
 export function resolveSlot(slotDesc, groupPicks) {
   const { pos, group } = parseSlot(slotDesc)
   return groupPicks[group]?.[pos] ?? null
 }
 
-// Build the R32 matchup list with resolved team objects
 export function buildR32Matchups(groupPicks) {
   return R32_FIXED_SLOTS.map(({ slot, home, away }) => ({
-    slot,
+    slot, home, away,
     homeTeam: resolveSlot(home, groupPicks),
     awayTeam: resolveSlot(away, groupPicks),
-    homeLabel: home,
-    awayLabel: away,
   }))
 }
 
-// Calculate points for a user's bracket predictions vs actual results
 export function calcBracketPoints({ groupPicks, knockoutPicks, actualGroupStandings, actualKnockoutWinners }) {
   let pts = 0
-
-  // Group stage: 2 pts per correct position
   for (const group of GROUPS) {
     const predicted = groupPicks[group] || {}
     const actual = actualGroupStandings[group] || {}
@@ -86,13 +86,8 @@ export function calcBracketPoints({ groupPicks, knockoutPicks, actualGroupStandi
       }
     }
   }
-
-  // Knockout: 5 pts per correct winner
   for (const [key, teamId] of Object.entries(knockoutPicks)) {
-    if (actualKnockoutWinners[key] && actualKnockoutWinners[key] === teamId) {
-      pts += BRACKET_POINTS.knockout_winner
-    }
+    if (actualKnockoutWinners[key] === teamId) pts += BRACKET_POINTS.knockout_winner
   }
-
   return pts
 }
