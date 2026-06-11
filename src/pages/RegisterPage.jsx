@@ -20,7 +20,7 @@ export default function RegisterPage() {
     setLoading(true)
     try {
       await signUp(email, password, username.trim())
-      navigate('/matches')
+      navigate('/leagues')
     } catch (err) {
       setError(err.message)
     } finally {
