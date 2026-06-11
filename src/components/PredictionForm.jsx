@@ -57,19 +57,20 @@ export default function PredictionForm({ match, existing, isKnockout, onSaved, o
       predicted_penalty_winner_id: showPenPicker ? penWinner || null : null,
     }
 
-    let err
+    let err, saved
     if (existing) {
-      ;({ error: err } = await supabase
-        .from('predictions')
-        .update({ ...payload, updated_at: new Date().toISOString() })
-        .eq('id', existing.id))
+      const updated = { ...payload, updated_at: new Date().toISOString() }
+      ;({ error: err } = await supabase.from('predictions').update(updated).eq('id', existing.id))
+      saved = { ...existing, ...updated }
     } else {
-      ;({ error: err } = await supabase.from('predictions').insert(payload))
+      const { data, error: insertErr } = await supabase.from('predictions').insert(payload).select().single()
+      err = insertErr
+      saved = data
     }
 
     setSaving(false)
     if (err) { setError(err.message); return }
-    onSaved()
+    onSaved(saved)
   }
 
   // ── Result-only mode ──────────────────────────────────────────────────────

@@ -190,7 +190,7 @@ export default function MatchCard({ match, prediction, onPredictionSaved, result
             existing={prediction}
             isKnockout={isKnockout}
             resultOnly={resultOnly}
-            onSaved={() => { setExpanded(false); onPredictionSaved?.() }}
+            onSaved={(saved) => { setExpanded(false); onPredictionSaved?.(match.id, saved) }}
             onCancel={() => setExpanded(false)}
           />
         </div>

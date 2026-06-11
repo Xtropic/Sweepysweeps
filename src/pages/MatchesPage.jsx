@@ -246,7 +246,7 @@ export default function MatchesPage() {
                       <MatchCard
                         match={match}
                         prediction={predictions[match.id]}
-                        onPredictionSaved={loadData}
+                        onPredictionSaved={(matchId, saved) => setPredictions(prev => ({ ...prev, [matchId]: saved }))}
                       />
                     </div>
                   ))}
@@ -266,7 +266,7 @@ export default function MatchesPage() {
               key={match.id}
               match={match}
               prediction={predictions[match.id]}
-              onPredictionSaved={loadData}
+              onPredictionSaved={(matchId, saved) => setPredictions(prev => ({ ...prev, [matchId]: saved }))}
             />
           ))}
         </div>
