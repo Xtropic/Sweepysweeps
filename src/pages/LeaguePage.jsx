@@ -295,19 +295,28 @@ export default function LeaguePage() {
       .filter(([, v]) => v.matches.some(m => m.status !== 'scheduled'))
       .sort((a, b) => b[1].order - a[1].order)
 
-    if (!startedRounds.length) {
-      setCurrentRoundLabel(null)
-      setCurrentRoundNumber(null)
-      setCurrentRoundPayments({})
-      return
+    const allRoundsSorted = Object.entries(roundsMap).sort((a, b) => a[1].order - b[1].order)
+
+    let label
+    let roundNumber
+    if (startedRounds.length) {
+      label = startedRounds[0][0]
+      const ascendedStarted = [...startedRounds].sort((a, b) => a[1].order - b[1].order)
+      roundNumber = ascendedStarted.findIndex(([l]) => l === label) + 1
+    } else {
+      // No round started yet — default to first scheduled round so the button is live
+      if (!allRoundsSorted.length) {
+        setCurrentRoundLabel(null)
+        setCurrentRoundNumber(null)
+        setCurrentRoundPayments({})
+        return
+      }
+      label = allRoundsSorted[0][0]
+      roundNumber = 1
     }
 
-    const [label] = startedRounds[0]
     setCurrentRoundLabel(label)
-
-    // Round number = 1-indexed position among all started rounds (ascending order)
-    const ascendedStarted = [...startedRounds].sort((a, b) => a[1].order - b[1].order)
-    setCurrentRoundNumber(ascendedStarted.findIndex(([l]) => l === label) + 1)
+    setCurrentRoundNumber(roundNumber)
 
     // Build payment maps
     const currentMap = {}
@@ -321,7 +330,7 @@ export default function LeaguePage() {
   }
 
   async function toggleCurrentRoundPaid(memberId, currentPaid) {
-    if (!currentRoundLabel) return
+    if (!currentRoundLabel) return // guard: should not happen after loadCurrentRoundPayments fix
     setTogglingCurrentRound(memberId)
     await supabase.from('league_round_payments').upsert(
       { league_id: id, user_id: memberId, round_label: currentRoundLabel, paid: !currentPaid },
@@ -685,19 +694,18 @@ export default function LeaguePage() {
                   {hasRoundPrize(league.prize_type) && (() => {
                     const rPaid = currentRoundPayments[member.id] ?? false
                     const rLabel = currentRoundNumber ? `R${currentRoundNumber}` : 'R1'
-                    const canToggle = !!currentRoundLabel
                     return isAdmin ? (
                       <button
-                        onClick={() => canToggle && toggleCurrentRoundPaid(member.id, rPaid)}
-                        disabled={togglingCurrentRound === member.id || !canToggle}
+                        onClick={() => toggleCurrentRoundPaid(member.id, rPaid)}
+                        disabled={togglingCurrentRound === member.id}
                         style={{
-                          fontSize: 11, fontWeight: 600, cursor: canToggle ? 'pointer' : 'default', flexShrink: 0,
+                          fontSize: 11, fontWeight: 600, cursor: 'pointer', flexShrink: 0,
                           border: 'none', borderRadius: 6, padding: '3px 8px',
                           background: rPaid ? '#D6EFE0' : '#F8DFDC',
                           color: rPaid ? '#0D3D20' : '#7A1C12',
-                          opacity: (togglingCurrentRound === member.id || !canToggle) ? 0.5 : 1,
+                          opacity: togglingCurrentRound === member.id ? 0.5 : 1,
                         }}
-                        title={canToggle ? `Toggle ${rLabel} paid status` : 'No round active yet'}
+                        title={`Toggle ${rLabel} paid status`}
                       >
                         {rPaid ? `${rLabel} Paid` : `${rLabel} Unpaid`}
                       </button>
