@@ -20,7 +20,8 @@ const SIZES = {
   responsive:  { width: '100%', height: 90 },
 }
 
-const CLIENT = import.meta.env.VITE_ADSENSE_CLIENT
+const CLIENT   = import.meta.env.VITE_ADSENSE_CLIENT
+const ADS_LIVE = import.meta.env.VITE_ADS_LIVE === 'true'
 
 // Inject the AdSense <script> once into <head> when the client ID is available.
 // Using a module-level flag so multiple AdBanner instances don't duplicate it.
@@ -41,7 +42,7 @@ export default function AdBanner({ slot, size = 'responsive', style = {} }) {
   const adRef  = useRef(null)
   const pushed = useRef(false)
   const { width, height } = SIZES[size] ?? SIZES.responsive
-  const adsReady = !!CLIENT && !!slot
+  const adsReady = !!CLIENT && !!slot && ADS_LIVE
 
   useEffect(() => {
     if (!adsReady) return
